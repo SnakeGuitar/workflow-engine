@@ -217,7 +217,7 @@ Dos carriles humanos (decisión 1): **motor** (backend, persistencia, canales) y
 | **H2** Motor durable | 19–21 nov | 3 | Temporizadores, reintentos, reanudación, no duplicación, concurrencia | Acciones del catálogo, historial, inyección de fallos | `kill -9` durante una espera; el flujo continúa sin repetir pasos | 25 % |
 | **H3** «Reparaciones» + respuestas | 22–25 nov | 4 | Correo, SMS y WhatsApp con política; respuestas entrantes | Cotización, bandeja, línea de tiempo, campos propios, vista del dueño | Caso → cotización → 24/72/120 h → *Sin respuesta* → bandeja; el cliente responde por WhatsApp | 50 % |
 | **H4** «Citas» + anclados | 26–28 nov | 3 | Temporizadores anclados y recálculo | Paquete y flujo «Citas», agenda del día | Reprogramar una cita Confirmada; respuesta «1» | — |
-| **H5** Resto de la escalera | 29–30 nov | 2 | Messenger, estados de entrega | Marketplace, plantillas, plugin de ejemplo, errores sobre el diagrama | Lo que llegue, en orden inverso a la escalera | 100 % de lo implementado |
+| **H5** Resto de la escalera | 29–30 nov | 2 | Messenger y Marketplace, estados de entrega | Plantillas de WhatsApp, plugin de ejemplo, errores sobre el diagrama | Lo que llegue, en orden inverso a la escalera | 100 % de lo implementado |
 | **H6** Cierre | 1–2 dic | 2 | Instalación limpia, RH-11, RH-18 | README, licencia, métricas, vídeo | Instalación en 15 min | Resultados |
 
 RH-09 (con y sin arnés) se ejecuta durante H1–H4 sobre tareas ya cerradas, no al final.
@@ -262,7 +262,7 @@ RH-09 (con y sin arnés) se ejecuta durante H1–H4 sobre tareas ya cerradas, no
 
 ### H5 — Resto de la escalera (29–30 nov)
 
-- En orden inverso a la escalera: RF-37 y CA-94a/b, RF-41, RF-93, RF-33, RF-38, RF-80/81 y RNF-13. Lo que no esté el 30 queda recortado.
+- En orden inverso a la escalera: RF-37, RF-38 y CA-94a/b, RF-41, RF-93, RF-33, RF-80/81 y RNF-13 (RF-27 va en H3). Lo que no esté el 30 queda recortado.
 
 ### H6 — Cierre (1–2 dic)
 

@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.10 |
-| Entrada | [requisitos.md](requisitos.md) v0.12 |
+| Versión | 0.11 |
+| Entrada | [requisitos.md](requisitos.md) v0.13 |
 | Razones, alternativas y riesgos | [humanos/](humanos/) (no necesario para implementar) |
 
 Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las versiones de paquetes son las que conozco: **verificarlas al instalar**. Las reglas de la sección 3 son ejecutables y alimentan RH-07.
@@ -36,6 +36,7 @@ Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las ve
 ### ADR-04 El tiempo es una dependencia
 - **Motivo:** RNF-08, CA-07, CA-08, CA-25.
 - **Decisión:** todo el código obtiene la hora por `TimeProvider` (abstracción estándar de .NET); las pruebas usan el reloj falso (`FakeTimeProvider`, paquete `Microsoft.Extensions.TimeProvider.Testing`). El cálculo de la ventana horaria (RN-08) usa la zona del negocio y se prueba con ese reloj.
+  - Los instantes se guardan en UTC. La zona del negocio es un identificador IANA; la ventana horaria y los temporizadores anclados se convierten a UTC con sus reglas de cambio de horario. Una duración fija se suma en tiempo transcurrido (24 h son 24 h aunque cambie el horario).
 - **Se aplica mecánicamente:** AR-03.
 
 ### ADR-05 Canales como puertos; simulados en el MVP, reales como plugins
@@ -55,7 +56,8 @@ Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las ve
   - Un **validador puro**, sin acceso a datos, implementa RN-10 y devuelve todos los errores (CA-02g).
   - Un **intérprete** ejecuta una versión nodo a nodo. Los tipos de nodo y las acciones del catálogo se registran en un **registro único y cerrado** (RF-06): un flujo con una acción desconocida no se valida.
   - El nodo **Temporizador** tiene dos modos: duración fija, o anclado (campo ancla del paquete, desplazamiento y sentido). El validador comprueba el campo contra el paquete activo (CA-17e).
-  - El nodo **Evento** admite «el caso entra a un estado» y «el cliente responde». La Condición puede leer el texto de la respuesta, normalizado (RN-34).
+  - El nodo **Evento** admite «el caso entra a uno de estos estados» (uno o varios, RF-25) y «el cliente responde». La Condición puede leer el texto de la respuesta, normalizado (RN-34).
+  - La acción **Notificar al dueño** admite opciones: destinos de estado entre los que el dueño elige desde la bandeja (RF-28, RN-38). Elegir una opción es un cambio de estado hecho por una persona (RF-21).
   - Un nodo que no es Condición tiene como máximo una salida (RN-10), así que una ejecución tiene un único nodo actual (ADR-03).
   - La cancelación por cambio de estado (RN-05) se modela con el parámetro `cancelarAlSalirDelEstado` del nodo Evento, activo por defecto; en falso, la ejecución solo se cancela cuando el caso llega a un estado terminal. La ejecución cuyo paso origina el cambio no se cancela por él y continúa con el nodo siguiente.
   - Al crear una ejecución de un flujo para un caso, la que siga en curso del mismo flujo y caso se cancela con el motivo «reemplazada» (RN-05).
@@ -137,6 +139,8 @@ AGENTS.md                         índice corto que remite a docs/
   - Un **validador de paquetes** puro (RN-21) reutiliza el validador de flujos (RN-10) para los flujos incluidos.
   - `Cases` aplica la tabla de transiciones y los efectos automáticos leyéndolos del paquete, y valida los campos propios. Ningún código nombra un estado concreto (AR-10).
   - Un caso se guarda con **columnas comunes** (folio, nombre, contacto, canal, estado, fecha, versión de paquete) y un **documento JSON** para los campos propios, validado contra el esquema del paquete.
+  - El **consentimiento** se guarda aparte, por canal y contacto, con fecha, origen y, si se retira, fecha de retirada (RN-26, RN-35). Un caso lo consulta por su canal y contacto; no lo copia.
+  - Las **variables de plantilla** son los campos comunes, los campos propios del paquete y `negocio`. Una plantilla con otra variable se rechaza al guardarla (CA-27c).
   - Los **plugins de código** (acciones, canales, lectores) se describen en ADR-17.
   - La **suite de conformidad** (CA-50d, CA-50e) ejecuta las pruebas de transiciones sobre cualquier paquete.
 - **Campos propios consultables:** los que el paquete declara `filtrable` o `buscable` se indexan con un índice sobre la expresión JSON en PostgreSQL, y las consultas de RF-51 solo los usan a ellos (CA-51d a CA-51g).
@@ -209,6 +213,10 @@ AGENTS.md                         índice corto que remite a docs/
   - **Anidamiento:** un ámbito abierto dentro de otro se une al exterior; solo el exterior confirma o revierte. Así, el paso del motor que ejecuta «Cambiar estado» confirma en una sola transacción el paso, el cambio de estado, las cancelaciones (RN-05) y el recálculo de temporizadores (RN-33).
   - Solo la implementación de `IUnitOfWork` llama a `SaveChanges` o abre transacciones; el reclamo con `FOR UPDATE SKIP LOCKED` (ADR-03) también pasa por ella.
 - **Regla:** AR-19.
+
+### ADR-21 Parámetros de flujo y de instalación
+- **Motivo:** RF-27, RN-11, CA-27a.
+- **Decisión:** los plazos y textos de un flujo forman parte de su documento; cambiarlos activa una versión nueva y las ejecuciones en curso conservan la suya (RN-11). La ventana horaria, la zona horaria del negocio y la política de reintentos son **configuración de la instalación**: se leen al decidir cada envío y se aplican desde que cambian.
 
 ---
 

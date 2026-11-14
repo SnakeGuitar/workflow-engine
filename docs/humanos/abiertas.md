@@ -9,7 +9,7 @@
 | OQ-03 | ¿Se puede cancelar un caso En reparación? Hoy no. |
 | OQ-04 | ¿Puede entregarse un equipo ya marcado Abandonado? Hoy es terminal. |
 | OQ-05 | ¿Cómo se registra el consentimiento del cliente (verbal, firma, mensaje)? |
-| OQ-06 | ¿Cómo se trata el cambio de horario de verano en la ventana horaria? |
+| OQ-06 | *(Resuelta el 2026-11-13: la ventana y los temporizadores anclados siguen la zona IANA del negocio con sus cambios de horario; las duraciones fijas miden tiempo transcurrido. RN-08, ADR-04.)* |
 | OQ-07 | ¿Qué rúbrica aplica el profesor y qué dice sobre uso de agentes (H-20)? |
 | OQ-08 | ¿Cuántas tareas y modelos caben en el presupuesto de uso (H-21)? |
 | OQ-09 | ¿Los valores de RN-03, RN-04 y RNF-01 coinciden con lo que los dueños dicen en entrevista? |

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.12 |
+| Versión | 0.13 |
 | Fecha límite | 2026-12-02 |
 | Equipo | 2 personas + agentes de programación |
 | Restricción de materia | Sistema web |
@@ -47,7 +47,7 @@
 
 **Alcance comprometido:** los CA marcados como comprometidos en `harness/scope.json` (protegido, RH-02). El resto del MVP es objetivo.
 
-**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80, RF-81 y RNF-13; (2) consultas de Marketplace, RF-38; (3) estados de entrega de WhatsApp, RF-33; (4) aprobación de plantillas con retraso en el simulador, RF-93; (5) errores sobre el diagrama, RF-41. Si aun así no alcanza, y solo con un cambio aprobado de este documento que rebaje su prioridad (RH-02): (6) canal Messenger, RF-37, CA-94a y CA-94b; (7) flujo «Seguimiento de cita» y temporizadores anclados, RF-53 y RF-17, conservando el paquete «Citas» como dato (RF-52). **No se recortan:** el alcance comprometido, las cuatro tareas del enunciado, el paquete «Reparaciones» con su flujo (RF-25), los campos propios consultables (RF-51), las respuestas del cliente por WhatsApp (RF-36), los canales Correo, SMS y WhatsApp, y el simulador.
+**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80, RF-81 y RNF-13; (2) parámetros y plantillas editables, RF-27 (quedan los valores por defecto); (3) estados de entrega de WhatsApp, RF-33; (4) aprobación de plantillas con retraso en el simulador, RF-93; (5) errores sobre el diagrama, RF-41. Si aun así no alcanza, y solo con un cambio aprobado de este documento que rebaje su prioridad (RH-02): (6) canal Messenger y consultas de Marketplace, RF-37, RF-38, CA-94a y CA-94b (un caso de Messenger solo nace de una consulta, CA-37c); (7) flujo «Seguimiento de cita» y temporizadores anclados, RF-53 y RF-17, conservando el paquete «Citas» como dato (RF-52). **No se recortan:** el alcance comprometido, las cuatro tareas del enunciado, el paquete «Reparaciones» con su flujo (RF-25), los campos propios consultables (RF-51), las respuestas del cliente por WhatsApp (RF-36), los canales Correo, SMS y WhatsApp, y el simulador.
 
 ---
 
@@ -95,7 +95,8 @@
 | **Recordatorio** | Aviso repetido por falta de respuesta o de recogida. |
 | **Plantilla de aviso** | Texto con variables de un aviso. *No confundir con plantilla de flujo ni con las plantillas de mensajes de WhatsApp.* |
 | **Plantilla de flujo** | Flujo predefinido listo para instalar. |
-| **Bandeja** | Lista de pendientes del dueño dentro del sistema. |
+| **Bandeja** | Lista de pendientes del dueño dentro del sistema. Una entrada puede ofrecer opciones que el dueño elige (por ejemplo, Marcar abandonado o Mantener, RF-28). |
+| **Consentimiento** | Autorización de un cliente para recibir avisos por un canal, registrada con fecha y origen. Pertenece al contacto en ese canal, no al caso: la comparten todos sus casos y RN-35 la retira para todos. |
 | **Ventana horaria** | Horas del día en que se permite enviar avisos. |
 | **Canal de aviso** | Servicio externo que entrega los avisos. En el MVP: Correo, SMS, WhatsApp y Messenger (los tres últimos simulados). En EXT: Telegram y los canales reales de Meta. |
 | **Vinculación (EXT)** | Asociación entre un caso y la conversación de Telegram del cliente, que se logra cuando el cliente abre el enlace del caso e inicia la conversación. |
@@ -129,6 +130,7 @@ Esta tabla es el paquete **«Reparaciones»**, entregado como dato (RF-50). El p
 
 **Estados:** Recibido (inicial), En diagnóstico, Cotización enviada, Sin respuesta, Aprobada, Rechazada, En reparación, Listo para recoger, Entregado, Cancelado, Abandonado.
 **Terminales:** Entregado, Cancelado, Abandonado.
+**Campos propios:** `marca` (texto, obligatorio), `modelo` (texto, obligatorio), `falla` (texto, obligatorio), `monto` (número, opcional; lo registra la cotización, RF-22).
 **Asignables por una persona:** todos los destinos de la tabla (RF-21); Abandonado, solo por decisión explícita del dueño (RN-13).
 **Asignable por la acción «Cambiar estado»:** Sin respuesta (RN-03).
 **Efectos automáticos:** ninguno.
@@ -184,10 +186,10 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 | RN-02 | Al entrar a **Cotización enviada** se envía un aviso con el monto. Al entrar a **Listo para recoger** se envía un aviso de recogida. |
 | RN-03 | Si una cotización no recibe respuesta: recordatorio a las **24 h** y a las **72 h**; a las **120 h** el caso pasa a **Sin respuesta** y se crea una entrada en la bandeja del dueño. |
 | RN-04 | Si un equipo en Listo para recoger no se recoge: recordatorios a los **3, 7 y 14 días**; a los **30 días** se crea una solicitud de decisión en la bandeja. El sistema **no** cambia el estado por sí mismo. |
-| RN-05 | Cuando un caso cambia de estado, se cancelan las esperas del caso programadas antes del cambio: temporizadores, recordatorios y avisos diferidos (RN-08) o en espera de reintento (RN-09). La ejecución que esperaba queda Cancelada con el motivo «cambio de estado» y un aviso cancelado queda «cancelado» (RN-28). Excepciones: (a) **el paso que ejecuta el cambio** termina, se registra como correcto y su ejecución continúa con el nodo siguiente; (b) un flujo cuyo evento de inicio declara que **sobrevive al cambio de estado** solo se cancela cuando el caso llega a un estado terminal. Un caso tiene como máximo una ejecución en curso por flujo: si se crea otra, la anterior se cancela con el motivo «reemplazada». |
+| RN-05 | Cuando un caso cambia de estado, se cancelan las esperas del caso programadas antes del cambio: temporizadores, recordatorios y avisos diferidos (RN-08) o en espera de reintento (RN-09). La ejecución que esperaba queda Cancelada con el motivo «cambio de estado» y un aviso cancelado queda «cancelado» (RN-28). Excepciones: (a) **el paso que ejecuta el cambio** termina, se registra como correcto y su ejecución continúa con el nodo siguiente; (b) un flujo cuyo evento de inicio declara que **sobrevive al cambio de estado** no pierde sus esperas y solo se cancela cuando el caso llega a un estado terminal. Un caso tiene como máximo una ejecución en curso por flujo: si se crea otra, la anterior se cancela con el motivo «reemplazada». |
 | RN-06 | Un mismo aviso (mismo caso, mismo evento, misma etapa de recordatorio) se entrega **una sola vez**, aunque haya reintentos, eventos repetidos o reinicios. |
 | RN-07 | No se envía ningún aviso a un cliente sin consentimiento registrado o sin contacto válido. En ese caso se crea una entrada en la bandeja. Con WhatsApp, el consentimiento (opt-in) debe estar registrado antes del primer mensaje (RN-26). Con Telegram (EXT), el contacto solo es válido cuando el cliente completó la vinculación (RF-32), y **iniciar la conversación cuenta como consentimiento**. Con Messenger, y con una consulta de Marketplace convertida en caso, también cuenta como consentimiento que el cliente inicie la conversación (RN-36). |
-| RN-08 | Los avisos solo se envían dentro de la ventana horaria (**09:00 a 20:00**, hora del negocio). Un aviso que vence fuera de ella se difiere al inicio de la siguiente. Las entradas de la bandeja no se difieren: no son avisos salientes y el dueño las ve al abrir la aplicación. |
+| RN-08 | Los avisos solo se envían dentro de la ventana horaria (**09:00 a 20:00**, hora del negocio). Un aviso que vence fuera de ella se difiere al inicio de la siguiente. Las entradas de la bandeja no se difieren: no son avisos salientes y el dueño las ve al abrir la aplicación. La ventana horaria y los temporizadores anclados se calculan en la zona horaria del negocio, con sus cambios de horario; los temporizadores de duración fija miden tiempo transcurrido. |
 | RN-09 | Un aviso fallido se reintenta hasta **3 veces** con esperas de **1 min, 5 min y 30 min**. Agotados los reintentos, el aviso queda "no entregado" y se crea una entrada en la bandeja. |
 | RN-10 | Un flujo es **válido** si: tiene exactamente un evento de inicio; no tiene ciclos; todos sus nodos son alcanzables desde el inicio; todo nodo que no es Condición tiene como máximo una salida; toda condición tiene rama por defecto; todo temporizador de duración fija dura más de 0 y como máximo **90 días**, y todo temporizador anclado declara un campo ancla del paquete y un desplazamiento de como máximo **90 días**; solo usa acciones registradas (RF-06) con parámetros válidos. |
 | RN-11 | Cada activación de un flujo crea una versión. Una ejecución conserva la versión con la que empezó, aunque se active una versión nueva. |
@@ -217,7 +219,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 | RN-35 | Si el cliente escribe exactamente «baja» o «stop», se retira su consentimiento: no se le envía ningún aviso más y se crea una entrada en la bandeja. |
 | RN-36 | En Messenger, el negocio solo puede iniciar un mensaje dentro de las **24 h** posteriores al último mensaje del cliente. Fuera de esa ventana el aviso no se envía: queda «bloqueado por ventana» y se crea una entrada en la bandeja. No hay plantillas ni costo por mensaje. Iniciar la conversación cuenta como consentimiento. |
 | RN-37 | Una consulta de Marketplace no es un caso: no recibe avisos, no dispara flujos y se conserva hasta que una persona la convierte en caso o la descarta (RN-15). Un mensaje nuevo de la misma persona sobre la misma publicación se agrega a la consulta abierta. |
-| RN-38 | Flujo por defecto del paquete «Citas» (valores modificables, RF-27). El flujo **sobrevive al cambio de estado** (RN-05 b): las condiciones siguientes deciden qué se envía tras Confirmada, y se cancela al llegar el caso a un estado terminal. Al entrar a **Agendada**: aviso con fecha, hora y servicio que pide responder «1» para confirmar o «2» para cancelar. **24 h antes** de la cita: recordatorio, solo si no está Confirmada. **12 h antes**: si sigue Agendada, entrada en la bandeja para que el dueño llame. **2 h antes**: recordatorio, esté Agendada o Confirmada. **2 h después** de la hora de la cita: si el caso no es terminal, entrada en la bandeja «¿asistió?» con las opciones Atendida y No asistió; el sistema no cambia el estado solo. «1» pasa el caso a Confirmada; «2», a Cancelada con una entrada informativa. |
+| RN-38 | Flujos por defecto del paquete «Citas» (valores modificables, RF-27). **«Seguimiento de cita»** se dispara al entrar a **Agendada** y **sobrevive al cambio de estado** (RN-05 b): las condiciones siguientes deciden qué se envía tras Confirmada, y se cancela al llegar el caso a un estado terminal. Al entrar a Agendada: aviso con fecha, hora y servicio que pide responder «1» para confirmar o «2» para cancelar. **24 h antes** de la cita: recordatorio, solo si no está Confirmada. **12 h antes**: si sigue Agendada, entrada en la bandeja para que el dueño llame. **2 h antes**: recordatorio, esté Agendada o Confirmada. **2 h después** de la hora de la cita: si el caso no es terminal, entrada en la bandeja «¿asistió?» con las opciones Atendida y No asistió; el sistema no cambia el estado solo. **«Respuesta de cita»** se dispara cuando el cliente responde (RF-36): «1» pasa el caso a Confirmada; «2», a Cancelada con una entrada informativa; cualquier otra respuesta sigue RN-34. |
 
 ---
 
@@ -246,7 +248,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 - **CA-03c** Dado un flujo activo en versión 1 con una ejecución en curso, cuando se modifica y se activa la versión 2, entonces la ejecución en curso termina con la versión 1 y las nuevas ejecuciones usan la 2 (RN-11).
 - **CA-03d** Dado un flujo activo, cuando se desactiva, entonces no se crean ejecuciones nuevas y las que estaban en curso continúan hasta terminar.
 
-**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a un estado, o el cliente responde, RF-36). En EXT se añade el evento «artefacto nuevo» (CA-61e). Un caso se crea siempre en el estado inicial de su paquete y la creación **no** emite el evento «entra al estado inicial»: solo lo emiten los cambios de estado (RN-01, RF-21), incluidos los efectos automáticos de la sección 6. Reaccionar a un caso nuevo queda en EXT como evento «caso creado».
+**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a uno de los estados que el evento declara, o el cliente responde, RF-36). En EXT se añade el evento «artefacto nuevo» (CA-61e). Un caso se crea siempre en el estado inicial de su paquete y la creación **no** emite el evento «entra al estado inicial»: solo lo emiten los cambios de estado (RN-01, RF-21), incluidos los efectos automáticos de la sección 6. Reaccionar a un caso nuevo queda en EXT como evento «caso creado».
 - **CA-04a** Dado un flujo activo cuyo evento es "el caso entra a Cotización enviada", cuando un caso entra a ese estado, entonces se crea exactamente una ejecución asociada a ese caso y a la versión vigente.
 - **CA-04b** Dado que no hay flujo activo para ese evento, cuando un caso cambia de estado, entonces el cambio se completa y no se crea ejecución.
 
@@ -350,7 +352,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 - **CA-24b** La búsqueda por folio, nombre (parcial, sin distinguir mayúsculas) o teléfono devuelve los casos que coinciden.
 - **CA-24c** La vista "requieren atención" muestra los casos con entradas de bandeja sin resolver o en Sin respuesta.
 
-**RF-25 (M, MVP) Plantilla de flujo "Seguimiento de reparación".** Viene instalada, activa y válida; implementa RN-02 a RN-09.
+**RF-25 (M, MVP) Plantilla de flujo "Seguimiento de reparación".** Viene instalada, activa y válida; implementa RN-02 a RN-09. Es un solo flujo: su evento de inicio es la entrada a Cotización enviada o a Listo para recoger, y una condición sobre el estado elige la rama.
 - **CA-25a** Tras la instalación, el flujo existe, está activo y pasa la validación.
 - **CA-25b** Un caso entra a Cotización enviada en t0 y no hay respuesta: aviso en t0 (dentro de ventana), recordatorios a 24 h y 72 h, y a 120 h el caso pasa a Sin respuesta con una entrada en la bandeja.
 - **CA-25c** Un caso entra a Listo para recoger: aviso inmediato, recordatorios a 3, 7 y 14 días y, a 30 días, una solicitud de decisión en la bandeja. El estado no cambia solo.
@@ -360,7 +362,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 **RF-26 (S, MVP) Línea de tiempo del caso.**
 - **CA-26a** Un caso muestra en orden cronológico sus cambios de estado, avisos con resultado, recordatorios, notas y decisiones del dueño.
 
-**RF-27 (S, MVP) Parámetros y plantillas de aviso.** El operador modifica plazos, ventana horaria, zona horaria, reintentos y textos.
+**RF-27 (S, MVP) Parámetros y plantillas de aviso.** El operador modifica plazos, ventana horaria, zona horaria, reintentos y textos. Cambiar plazos o textos de un flujo crea una versión nueva del flujo (RN-11); la ventana horaria, la zona horaria y los reintentos son de la instalación y se aplican desde ese momento.
 - **CA-27a** Dado que el operador cambia el primer recordatorio de 24 h a 12 h, cuando un caso entra después a Cotización enviada, entonces usa 12 h; una ejecución iniciada antes conserva 24 h (RN-11).
 - **CA-27b** Un dueño no puede modificar parámetros ni plantillas.
 - **CA-27c** Una plantilla con las variables `{folio}`, `{negocio}` y `{monto}` se rellena al enviar; una plantilla con una variable desconocida se rechaza al guardarla.
@@ -463,14 +465,14 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). R
 - **CA-51f** Con 1 000 casos, filtrar por un campo propio filtrable tarda p95 ≤ 2 s (RNF-03).
 - **CA-51g** Un campo propio no declarado filtrable ni buscable no puede usarse como filtro y el error lo dice.
 
-**RF-52 (M, MVP) Paquete «Citas».** Segundo paquete real, entregado como dato con los estados, campos y flujo de la sección 6.2 y de RN-38.
+**RF-52 (M, MVP) Paquete «Citas».** Segundo paquete real, entregado como dato con los estados y campos de la sección 6.2 y los flujos «Seguimiento de cita» y «Respuesta de cita» de RN-38.
 - **CA-52a** Dado el paquete «Citas», cuando se ejecuta la suite de conformidad, entonces pasa CA-21a y CA-21c sobre su tabla completa (CA-50d).
 - **CA-52b** Dado un caso de «Citas» sin `fecha_cita` o sin `servicio`, cuando se registra, entonces se rechaza indicando el campo; una `fecha_cita` en el pasado también se rechaza.
 - **CA-52c** Dado un caso Agendado o Confirmado cuya franja (`fecha_cita` y `duracion`) se traslapa con otro caso Agendado o Confirmado, cuando se agenda o se reprograma, entonces se muestra una advertencia con el caso en conflicto y la acción se permite.
 - **CA-52d** Dado un caso Confirmado, cuando se cambia su `fecha_cita`, entonces vuelve a Agendada y se pide confirmar de nuevo (RN-33).
 - **CA-52e** La vista «Agenda del día» muestra los casos Agendados y Confirmados de un día, ordenados por hora.
 
-**RF-53 (M, MVP) Flujo «Seguimiento de cita».** Viene instalado, activo y válido con el paquete; implementa RN-38 sobre RF-17 y RF-36.
+**RF-53 (M, MVP) Flujo «Seguimiento de cita».** Viene instalado, activo y válido con el paquete; implementa RN-38 sobre RF-17. Las respuestas del cliente las atiende el flujo «Respuesta de cita» (RF-52, RF-36).
 - **CA-53a** Tras instalar el paquete, el flujo existe, está activo y pasa la validación.
 - **CA-53b** Dada una cita para las 15:00 del día X, y un caso que entra a Agendada 3 días antes a las 10:00 sin respuesta del cliente: aviso inmediato; recordatorio un día antes a las 15:00; entrada en la bandeja a las 03:00 del día X; recordatorio a las 13:00; entrada «¿asistió?» a las 17:00.
 - **CA-53c** Dada la respuesta «1» dos días antes de la cita: el caso pasa a Confirmada y no hay recordatorio de 24 h ni entrada de 12 h; el recordatorio de 2 h sí se envía.
