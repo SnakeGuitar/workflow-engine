@@ -1,73 +1,38 @@
-# Especificación de requisitos: motor de flujos web, abierto y extensible (primer caso: microempresas)
+# Requisitos: motor de flujos web, abierto y extensible (primer caso: microempresas)
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.8 (borrador provisional) |
-| Fecha | 2026-11-12 |
-| Fecha límite del proyecto | 2026-12-02 |
-| Estado | Borrador provisional, alineado con las tareas técnicas del enunciado (sección 1.1). Los escenarios de negocio son supuestos del equipo (ver H-16, H-17, H-33) |
-| Equipo | 2 personas + agentes de programación (varios proveedores) |
+| Versión | 0.10 |
+| Fecha límite | 2026-12-02 |
+| Equipo | 2 personas + agentes de programación |
 | Restricción de materia | Sistema web |
+| Contexto, decisiones e historial | [humanos/](humanos/) (no necesario para implementar) |
 
 ---
 
-## 0. Cómo leer y usar este documento (personas y agentes)
+## 0. Cómo usar este documento
 
-1. **Identificadores estables.** `N` necesidad, `RF` requisito funcional, `RNF` requisito no funcional, `RN` regla de negocio, `CA` criterio de aceptación, `RH` requisito del arnés/experimento, `D` decisión, `H` hipótesis, `OQ` pregunta abierta. Un ID nunca se reutiliza ni cambia de significado.
-2. **Formato de los criterios de aceptación.** `Dado / Cuando / Entonces`. Todo CA se verifica sin juicio humano, salvo los marcados **[HUMANO]**.
-3. **Tiempo.** Todo CA con tiempo se lee sobre un **reloj controlable** (RNF-08): "el reloj avanza 24 h" significa que el tiempo simulado avanza, no que se espera.
-4. **Prioridad.** `M` imprescindible, `S` deseable, `C` opcional. **Etapa:** `MVP`, `EXT` (extendida), `FUT` (futura). Solo `MVP` entra en el alcance del 2 de diciembre.
-5. **Este documento no fija tecnologías ni arquitectura.** Eso se decide en un documento aparte, posterior.
-6. **Los criterios de aceptación son el contrato.** Un agente no modifica un CA para hacer pasar una prueba. Todo cambio de este documento se registra en la sección 14 (RH-02, RH-13).
-7. **Separación.** Las secciones 1 a 9 describen el **producto**. La sección 10 describe el **arnés y el experimento**. No se mezclan sus criterios de éxito.
+1. **IDs estables.** `RF` requisito funcional, `RNF` no funcional, `RN` regla de negocio, `CA` criterio de aceptación, `RH` requisito del arnés, `AR` regla de arquitectura. Un ID nunca se reutiliza ni cambia de significado. Los `D`, `H`, `OQ` y `RI` viven en `humanos/`.
+2. **CA.** Formato `Dado / Cuando / Entonces`. Todo CA se verifica sin juicio humano, salvo los marcados **[HUMANO]**.
+3. **Tiempo.** Todo CA con tiempo se lee sobre un reloj controlable (RNF-08): "avanza 24 h" es tiempo simulado.
+4. **Prioridad.** `M` imprescindible, `S` deseable, `C` opcional. **Etapa:** `MVP`, `EXT`, `FUT`. Solo `MVP` entra en el alcance del 2 de diciembre.
+5. **Los CA son el contrato.** Un agente no modifica un CA para hacer pasar una prueba. Todo cambio de este documento se registra en `humanos/historial.md` (RH-02, RH-13).
 
 ---
 
-## 1. Propósito, contexto y necesidades
+## 1. Propósito y alcance del producto
 
-**Propósito.** Un sistema web, abierto y extensible, para diseñar, validar y ejecutar flujos de trabajo automáticos: se arrastran nodos de **Evento**, **Condición**, **Acción** y **Temporizador**, el sistema valida que no haya ciclos y lo compila a un grafo ejecutable, y un motor asíncrono lo ejecuta con esperas, reintentos y trazabilidad. Cumple las tareas técnicas del enunciado de la materia (sección 1.1). El primer caso de uso es el seguimiento de reparaciones de celulares, con avisos por Correo, SMS y WhatsApp sobre un simulador de servicios de terceros. A futuro (EXT), el sistema se adaptaría a cada negocio a partir de lo que el negocio ya produce.
+**Propósito.** Sistema web, abierto y extensible, para diseñar, validar y ejecutar flujos automáticos: se arrastran nodos **Evento**, **Condición**, **Acción** y **Temporizador**; el sistema valida que no haya ciclos, compila a un DAG ejecutable y un motor asíncrono lo ejecuta con esperas, reintentos y trazabilidad. Primer caso: seguimiento de reparaciones de celulares con avisos por Correo, SMS y WhatsApp sobre un simulador de servicios de terceros.
 
-**Visión (EXT).** Que el sistema observe los artefactos que un negocio ya genera, **extraiga** de ellos los casos y **proponga** procesos a automatizar que una persona confirma. El dueño no cambia sus hábitos: el sistema los aprovecha. Queda fuera del MVP del 2 de diciembre (D-14); sus requisitos se conservan en las secciones 8.8 y 8.9.
+**Visión (EXT).** El sistema lee los artefactos que el negocio ya genera, extrae casos y propone procesos que una persona confirma. Cadena: Fuente → Ingesta de solo lectura → Extracción de candidatos → Confirmación humana → Caso en el paquete → Propuesta de paquete y flujo → Confirmación humana → Motor.
 
-**Dos problemas distintos.** (i) *El proceso:* qué estados atraviesa un trabajo. (ii) *La fuente de verdad:* dónde queda registrado. En el escenario de abajo el proceso es casi el mismo y lo que cambia es la fuente; por eso el primer valor está en la **extracción hacia un modelo común de caso**. El **descubrimiento de procesos distintos** cobra más peso en oficios cuyo proceso sí varía entre negocios (H-32).
+**Escenario de referencia (tres locales de reparación).** Datos sintéticos; origen del corpus de EXT (RH-15).
 
-**Escenario de referencia (tres locales de reparación).** Lo plantea el equipo; las pruebas usan **datos sintéticos** (H-33).
-
-| Local | Cómo trabaja | Artefactos que genera | Estados visibles en el artefacto |
+| Local | Cómo trabaja | Artefactos | Estados visibles |
 |---|---|---|---|
-| E-01 | Cotiza, toma foto del equipo, escribe un archivo de texto por caso y lo guarda en una carpeta (Drive o local); repara y entrega | Una foto y un `.txt` por caso | Casi ninguno explícito; se infieren del texto |
-| E-02 | Cotiza, anota en una libreta; repara y entrega | Fotos de las páginas de la libreta | Ninguno explícito |
-| E-03 | Cotiza, registra en una hoja de cálculo y revisa el calendario; repara y entrega | Hoja de cálculo y eventos de calendario | Columna de estado y fecha prometida |
-
-Lo común: llega un cliente con un equipo con una falla, se cotiza, se repara y se entrega. Lo que cambia es **dónde queda registrado**. Este escenario es el caso de uso de la visión (EXT) y el origen de su corpus de pruebas.
-
-**Cadena de la visión:** Fuente → Ingesta de solo lectura → Extracción de casos candidatos → Confirmación humana → Caso en el paquete de proceso → Propuesta de paquete y de flujo → Confirmación humana → Motor de flujos.
-
-**Competencia real a superar:** la libreta, la hoja de cálculo y las notas del teléfono. La libreta es memoria pasiva; el sistema debe ser **memoria que actúa** (avisa, recuerda, vigila) con un costo de registro comparable al de apuntar a mano.
-
-### 1.1 Trazabilidad con el enunciado del profesor
-
-| Tarea técnica del enunciado | Requisitos |
-|---|---|
-| Interfaz gráfica interactiva para arrastrar, soltar y conectar nodos (Eventos, Condiciones, Acciones) | RF-40, RF-41; CA-40a, CA-40d |
-| Analizador en el backend que valida que no haya ciclos y transforma el diagrama en un JSON ejecutable (DAG) | RF-02, RF-14, RN-10 |
-| Motor de ejecución asíncrono que evalúa condiciones y ejecuta acciones, con retrasos y reintentos automáticos ante fallos de red | RF-04 a RF-13, RF-18, RN-05, RN-09, RN-30 |
-| Webhooks salientes y simulación de APIs de terceros (correos, SMS, HTTP POST) | RF-16, RF-90 a RF-92, RN-29 |
-| Arquitectura recomendada (máquina de estados finita, Saga, microservicios; PostgreSQL y Redis) | Es una **recomendación**, no un requisito (D-17): se adoptan la máquina de estados finita (RN-30), el DAG y PostgreSQL; microservicios, Saga y Redis no se usan, con justificación en ADR-18 |
-
-### Necesidades (HIPÓTESIS, no validadas por entrevistas)
-
-| ID | Necesidad | Hipótesis asociada |
-|---|---|---|
-| N-01 | El dueño olvida avisar al cliente y dar seguimiento a cotizaciones sin respuesta | H-16 |
-| N-02 | Los equipos listos que no se recogen ocupan espacio y dinero inmovilizado | H-22 |
-| N-03 | La libreta no avisa nada; todo depende de la memoria del dueño | H-16 |
-| N-04 | Registrar un trabajo debe ser tan rápido como apuntarlo | H-23 |
-| N-05 | El dueño no tiene conocimientos técnicos y no debe ver conceptos técnicos | H-03 |
-| N-06 | El operador (equipo) necesita definir y verificar procesos sin programar cada uno | H-24 |
-| N-07 | Cada negocio registra sus trabajos de forma distinta y no quiere cambiar sus hábitos | H-33 |
-| N-08 | El dueño no sabe formalizar sus procesos, pero sus propios artefactos los revelan | H-32 |
-| N-09 | Un integrador o desarrollador necesita añadir acciones, canales o fuentes sin modificar el motor | H-38 |
+| E-01 | Un archivo de texto y una foto por caso, en una carpeta | Foto y `.txt` | Casi ninguno explícito |
+| E-02 | Libreta | Fotos de las páginas | Ninguno explícito |
+| E-03 | Hoja de cálculo y calendario | Hoja y eventos | Columna de estado y fecha prometida |
 
 ---
 
@@ -75,12 +40,12 @@ Lo común: llega un cliente con un equipo con una falla, se cotiza, se repara y 
 
 | Etapa | Contenido |
 |---|---|
-| **MVP** | Las cuatro tareas del enunciado: editor visual de nodos, analizador y compilador a DAG ejecutable, motor asíncrono con esperas y reintentos, y webhooks salientes con simulador de APIs de terceros (correo, SMS, WhatsApp, HTTP POST). Primer caso: seguimiento de reparaciones como paquete de proceso. Vista web móvil para el dueño. Canales Correo, SMS y WhatsApp (los dos últimos simulados) con las restricciones de WhatsApp modeladas. Extensibilidad mínima y preparación para open source. |
-| **EXT** | Pasos de agente, ingesta de fuentes, extracción de casos y propuestas de paquete y de flujo (RF-15, RF-60 a RF-72). Telegram (RF-32). Aviso asistido por WhatsApp (RF-34). WhatsApp con la API oficial de Meta (RF-82). Segundo paquete real (citas). Editor visual completo. Varios negocios aislados entre sí. Respuestas del cliente recibidas por el canal. Carga de plugins desde carpeta. |
+| **MVP** | Las cuatro tareas del enunciado: editor visual de nodos, analizador y compilador a DAG ejecutable, motor asíncrono con esperas y reintentos, y webhooks salientes con simulador de APIs de terceros (correo, SMS, WhatsApp, HTTP POST). Dos paquetes de proceso: «Reparaciones» (primer caso) y «Citas». Temporizadores anclados a una fecha del caso y filtro y búsqueda por campos propios. Vista web móvil para el dueño. Canales Correo, SMS, WhatsApp y Messenger (los tres últimos simulados) con las restricciones de WhatsApp y Messenger modeladas. Respuestas del cliente por el canal y consultas de Marketplace (simuladas). Extensibilidad mínima y preparación para open source. |
+| **EXT** | Pasos de agente, ingesta de fuentes, extracción de casos y propuestas de paquete y de flujo (RF-15, RF-60 a RF-72). Telegram (RF-32). Aviso asistido por WhatsApp (RF-34). WhatsApp, Messenger y Marketplace reales con las APIs de Meta (RF-82). Más paquetes (encargos, cotizaciones, talleres). Editor visual completo. Varios negocios aislados entre sí. Carga de plugins desde carpeta. |
 | **FUT** | Estandarización de paquetes entre negocios. Más oficios. Reportes. Modelos locales para evitar la salida de datos. Comunidad de plugins y conectores. |
 | **Fuera de alcance** | Cobros y facturación. Inventario de refacciones. Aplicación móvil nativa. |
 
-**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80 a RF-82 y RNF-13; (2) estados de entrega de WhatsApp, RF-33; (3) aprobación de plantillas con retraso en el simulador, RF-93; (4) campos propios, RF-51; (5) canal SMS. **No se recortan:** las cuatro tareas del enunciado, el paquete «Reparaciones», el canal Correo y el simulador con WhatsApp y sus restricciones.
+**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80 a RF-82 y RNF-13; (2) consultas de Marketplace, RF-38; (3) estados de entrega de WhatsApp, RF-33; (4) aprobación de plantillas con retraso en el simulador, RF-93; (5) canal SMS. **No se recortan:** las cuatro tareas del enunciado, los paquetes «Reparaciones» y «Citas», los temporizadores anclados (RF-17), los campos propios consultables (RF-51), las respuestas del cliente (RF-36), el canal Correo y el simulador con WhatsApp y Messenger.
 
 ---
 
@@ -90,31 +55,26 @@ Lo común: llega un cliente con un equipo con una falla, se cotiza, se repara y 
 |---|---|---|
 | **Dueño** | Dueño o encargado del taller. Sin conocimientos técnicos. | Sí (vista móvil simple) |
 | **Operador** | Persona que instala, configura y da soporte: flujos, parámetros, plantillas y simulador. | Sí (consola con editor) |
-| **Cliente final** | Persona que deja su equipo. Recibe avisos. | No |
+| **Cliente final** | Persona que deja su equipo o pide una cita. Recibe avisos y puede responder por el canal (RF-36). | No usa la interfaz |
 | **Canal de aviso** | Servicio externo que entrega mensajes al cliente. | Sistema externo |
 | **Fuente de artefactos** | Carpeta, hoja de cálculo, calendario o imágenes del negocio. Se lee, nunca se modifica. | Sistema externo (solo lectura) |
 | **Proveedor de modelo** | Servicio externo de modelos que analiza artefactos y propone (EXT). | Sistema externo |
 | **Integrador** | Desarrollador que crea plugins (acciones, canales, lectores) sin modificar el motor. | No usa la interfaz; usa el contrato de extensión |
-| **Simulador de terceros** | Aplicación del propio proyecto que imita correo, SMS, WhatsApp y un receptor HTTP POST. | Sistema externo simulado |
+| **Simulador de terceros** | Aplicación del propio proyecto que imita correo, SMS, WhatsApp, Messenger y un receptor HTTP POST. | Sistema externo simulado |
 
 ---
 
-## 4. Restricciones y supuestos
+## 4. Restricciones
 
 **Restricciones**
 - R-01 Sistema web, accesible desde navegador sin instalar nada.
 - R-02 Plazo: 2026-12-02. Equipo de 2 personas con agentes de programación.
-- R-03 Uso de modelos limitado por las suscripciones del equipo (H-21).
+- R-03 Uso de modelos limitado por las suscripciones del equipo.
 - R-04 Interfaz en español.
-- R-05 Los agentes de descubrimiento solo producen **datos** (casos candidatos y propuestas); nunca código ni activaciones (D-11).
+- R-05 Los agentes de descubrimiento solo producen **datos** (casos candidatos y propuestas); nunca código ni activaciones.
 - R-06 La ingesta de fuentes es de solo lectura (RN-18).
-- R-07 El proyecto se publica como código abierto; la licencia se decide en OQ-15 (D-18).
-- R-08 Se cumplen las tareas técnicas del enunciado de la materia (sección 1.1).
-
-**Supuestos (a verificar)**
-- S-01 El taller cuenta con teléfono con navegador y conexión a internet.
-- S-02 El cliente final aporta un contacto válido y acepta recibir avisos (H-17).
-- S-03 Correo y SMS entregan mensajes sin aprobación previa de plantillas; WhatsApp sí la exige y se modela en el simulador (RN-24, RN-25, D-15).
+- R-07 El proyecto se publica como código abierto; licencia por decidir.
+- R-08 Se cumplen las tareas técnicas del enunciado de la materia.
 
 ---
 
@@ -135,7 +95,7 @@ Lo común: llega un cliente con un equipo con una falla, se cotiza, se repara y 
 | **Plantilla de flujo** | Flujo predefinido listo para instalar. |
 | **Bandeja** | Lista de pendientes del dueño dentro del sistema. |
 | **Ventana horaria** | Horas del día en que se permite enviar avisos. |
-| **Canal de aviso** | Servicio externo que entrega los avisos. En el MVP: Correo, SMS y WhatsApp (SMS y WhatsApp simulados). En EXT: Telegram y WhatsApp real. |
+| **Canal de aviso** | Servicio externo que entrega los avisos. En el MVP: Correo, SMS, WhatsApp y Messenger (los tres últimos simulados). En EXT: Telegram y los canales reales de Meta. |
 | **Vinculación (EXT)** | Asociación entre un caso y la conversación de Telegram del cliente, que se logra cuando el cliente abre el enlace del caso e inicia la conversación. |
 | **Paquete de proceso** | Definición declarativa de un tipo de negocio: estados, transiciones, campos propios, plantillas de aviso y flujos incluidos. Es dato, no código. |
 | **Fuente** | Lugar donde un negocio guarda sus artefactos (carpeta, hoja de cálculo, calendario, imágenes). |
@@ -153,12 +113,17 @@ Lo común: llega un cliente con un equipo con una falla, se cotiza, se repara y 
 | **DAG ejecutable** | Documento JSON, resultado de compilar un flujo válido, con nodos, aristas, nodo de inicio y orden topológico. |
 | **Plugin** | Pieza de código que añade una acción, un canal o un lector de fuentes mediante el contrato de extensión. |
 | **Reloj controlable** | Fuente de tiempo que las pruebas pueden adelantar. |
+| **Campo ancla** | Campo propio de tipo fecha que un paquete marca como referencia para temporizadores (en «Citas», `fecha_cita`). |
+| **Temporizador anclado** | Nodo Temporizador que espera hasta un campo ancla del caso más o menos un desplazamiento, en vez de una duración fija. |
+| **Respuesta del cliente** | Mensaje entrante de un canal con respuesta (WhatsApp, Messenger) asociado a un caso. Emite el evento «el cliente responde». |
+| **Consulta** | Mensaje de una persona sin caso que llega por Marketplace. No es un caso hasta que una persona lo convierte. |
+| **Messenger** | Canal de mensajería de Facebook. Marketplace es el origen de algunas consultas, que llegan por Messenger. |
 
 ---
 
-## 6. Modelo de estados: paquete de referencia «Reparaciones»
+## 6. Modelo de estados: paquetes de referencia
 
-Esta tabla es el **paquete de referencia**, entregado como dato (RF-50). Otro paquete define sus propios estados.
+Esta tabla es el paquete **«Reparaciones»**, entregado como dato (RF-50). El paquete «Citas» está en 6.2. Otro paquete define sus propios estados.
 
 **Estados:** Recibido, En diagnóstico, Cotización enviada, Sin respuesta, Aprobada, Rechazada, En reparación, Listo para recoger, Entregado, Cancelado, Abandonado.
 **Terminales:** Entregado, Cancelado, Abandonado.
@@ -186,6 +151,20 @@ Una ejecución es **Completada con fallo** cuando termina pero alguna acción ag
 | Esperando | En curso, Cancelada, Fallida |
 | Completada, Completada con fallo, Cancelada, Fallida | (ninguno) |
 
+### 6.2 Paquete «Citas»
+
+**Estados:** Solicitada (inicial), Agendada, Confirmada, Atendida, No asistió, Cancelada.
+**Terminales:** Atendida, No asistió, Cancelada.
+**Campos propios:** `fecha_cita` (fecha y hora, obligatorio, campo ancla, filtrable), `servicio` (texto, obligatorio, buscable), `duracion` (minutos, opcional, 30 por defecto).
+**Asignables por el sistema:** Confirmada y Cancelada (por respuesta del cliente, RF-36) y Agendada (al reprogramar una cita Confirmada).
+
+| Origen | Destinos permitidos |
+|---|---|
+| Solicitada | Agendada, Cancelada |
+| Agendada | Confirmada, Atendida, No asistió, Cancelada |
+| Confirmada | Agendada, Atendida, No asistió, Cancelada |
+| Atendida, No asistió, Cancelada | (ninguno) |
+
 ---
 
 ## 7. Reglas de negocio
@@ -200,10 +179,10 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RN-04 | Si un equipo en Listo para recoger no se recoge: recordatorios a los **3, 7 y 14 días**; a los **30 días** se crea una solicitud de decisión en la bandeja. El sistema **no** cambia el estado por sí mismo. |
 | RN-05 | Cuando un caso cambia de estado, se cancelan los recordatorios y esperas pendientes del estado anterior. |
 | RN-06 | Un mismo aviso (mismo caso, mismo evento, misma etapa de recordatorio) se entrega **una sola vez**, aunque haya reintentos, eventos repetidos o reinicios. |
-| RN-07 | No se envía ningún aviso a un cliente sin consentimiento registrado o sin contacto válido. En ese caso se crea una entrada en la bandeja. Con WhatsApp, el consentimiento (opt-in) debe estar registrado antes del primer mensaje (RN-26). Con Telegram (EXT), el contacto solo es válido cuando el cliente completó la vinculación (RF-32), y **iniciar la conversación cuenta como consentimiento**. |
+| RN-07 | No se envía ningún aviso a un cliente sin consentimiento registrado o sin contacto válido. En ese caso se crea una entrada en la bandeja. Con WhatsApp, el consentimiento (opt-in) debe estar registrado antes del primer mensaje (RN-26). Con Telegram (EXT), el contacto solo es válido cuando el cliente completó la vinculación (RF-32), y **iniciar la conversación cuenta como consentimiento**. Con Messenger, y con una consulta de Marketplace convertida en caso, también cuenta como consentimiento que el cliente inicie la conversación (RN-36). |
 | RN-08 | Los avisos solo se envían dentro de la ventana horaria (**09:00 a 20:00**, hora del negocio). Un aviso que vence fuera de ella se difiere al inicio de la siguiente. |
 | RN-09 | Un aviso fallido se reintenta hasta **3 veces** con esperas de **1 min, 5 min y 30 min**. Agotados los reintentos, el aviso queda "no entregado" y se crea una entrada en la bandeja. |
-| RN-10 | Un flujo es **válido** si: tiene exactamente un evento de inicio; no tiene ciclos; todos sus nodos son alcanzables desde el inicio; toda condición tiene rama por defecto; todo temporizador dura más de 0 y como máximo **90 días**; solo usa acciones registradas (RF-06) con parámetros válidos. |
+| RN-10 | Un flujo es **válido** si: tiene exactamente un evento de inicio; no tiene ciclos; todos sus nodos son alcanzables desde el inicio; toda condición tiene rama por defecto; todo temporizador de duración fija dura más de 0 y como máximo **90 días**, y todo temporizador anclado declara un campo ancla del paquete y un desplazamiento de como máximo **90 días**; solo usa acciones registradas (RF-06) con parámetros válidos. |
 | RN-11 | Cada activación de un flujo crea una versión. Una ejecución conserva la versión con la que empezó, aunque se active una versión nueva. |
 | RN-12 | Cada paso de una ejecución queda registrado: nodo, inicio, fin, resultado, entrada resumida, número de intento y error si lo hubo. El registro no se modifica ni se borra. |
 | RN-13 | El estado **Abandonado** solo se asigna por decisión explícita del dueño. |
@@ -217,7 +196,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RN-21 | Un paquete es **válido** si: tiene un estado inicial; todos sus estados son alcanzables; las transiciones solo unen estados declarados; tiene al menos un estado terminal; todo campo propio declara tipo y obligatoriedad; y cada flujo que incluye es válido según RN-10. |
 | RN-22 | Cada activación de un paquete crea una versión. Un caso conserva la versión con la que se creó. |
 | RN-23 | Los artefactos importados y los textos extraídos se conservan **30 días** o hasta que el dueño los borre. Borrar una fuente elimina sus artefactos y fragmentos de evidencia; los casos ya confirmados se conservan. |
-| RN-24 | En WhatsApp, un mensaje iniciado por el negocio fuera de la **ventana de conversación** (24 h desde el último mensaje del cliente) debe usar una **plantilla de mensaje aprobada**. Dentro de la ventana puede ser texto libre (H-40). |
+| RN-24 | En WhatsApp, un mensaje iniciado por el negocio fuera de la **ventana de conversación** (24 h desde el último mensaje del cliente) debe usar una **plantilla de mensaje aprobada**. Dentro de la ventana puede ser texto libre. |
 | RN-25 | Una plantilla de mensaje de WhatsApp tiene estado: borrador, en revisión, aprobada o rechazada. Un aviso que la necesita no se envía mientras no esté aprobada: queda "pendiente de plantilla" y se crea una entrada en la bandeja. |
 | RN-26 | No se envía un mensaje de WhatsApp sin el consentimiento (opt-in) del cliente, registrado con fecha. |
 | RN-27 | Cada mensaje de WhatsApp registra su categoría y su costo estimado. Hay un tope mensual configurable: al alcanzarlo no se envían más mensajes de WhatsApp, quedan "retenidos por tope" y se crea una entrada en la bandeja. |
@@ -225,6 +204,13 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RN-29 | Un webhook saliente se reintenta ante fallo de red, tiempo de espera agotado (10 s) y respuestas 5xx, con las esperas de RN-09. No se reintenta ante respuestas 4xx. |
 | RN-30 | Una ejecución solo cambia de estado mediante las transiciones de la sección 6.1. Cada cambio queda registrado con su instante. |
 | RN-31 | Un plugin declara la versión del contrato de extensión que implementa; con una versión incompatible no se registra. Una excepción dentro de un plugin hace fallar el paso, no el motor. |
+| RN-32 | Un temporizador anclado espera hasta el valor del campo ancla del caso más o menos un desplazamiento (antes o después), en hora del negocio. Si ese instante ya pasó al llegar al nodo, el paso se omite y queda registrado; la ejecución sigue. Un aviso «antes de» que la ventana horaria (RN-08) llevaría después de la fecha ancla no se envía: se crea una entrada en la bandeja. |
+| RN-33 | Al cambiar un campo ancla, los temporizadores anclados pendientes del caso se recalculan en la misma transacción. La referencia única de un aviso incluye la fecha ancla vigente: el recordatorio de la nueva fecha es un aviso distinto (RN-06). |
+| RN-34 | Un mensaje entrante se asocia al caso no terminal con el mismo canal y contacto; si hay varios, al más reciente y se crea una entrada en la bandeja. Sin caso asociado se crea una entrada en la bandeja (o una consulta, RN-37). Un mensaje se registra una sola vez por su identificador externo. El sistema no interpreta texto libre: una condición solo compara la respuesta con valores que el flujo declara, sin distinguir mayúsculas, acentos ni espacios sobrantes. Una respuesta no reconocida no cambia nada y crea una entrada en la bandeja. |
+| RN-35 | Si el cliente escribe exactamente «baja» o «stop», se retira su consentimiento: no se le envía ningún aviso más y se crea una entrada en la bandeja. |
+| RN-36 | En Messenger, el negocio solo puede iniciar un mensaje dentro de las **24 h** posteriores al último mensaje del cliente. Fuera de esa ventana el aviso no se envía: queda «bloqueado por ventana» y se crea una entrada en la bandeja. No hay plantillas ni costo por mensaje. Iniciar la conversación cuenta como consentimiento. |
+| RN-37 | Una consulta de Marketplace no es un caso: no recibe avisos, no dispara flujos y se conserva hasta que una persona la convierte en caso o la descarta (RN-15). Un mensaje nuevo de la misma persona sobre la misma publicación se agrega a la consulta abierta. |
+| RN-38 | Flujo por defecto del paquete «Citas» (valores modificables, RF-27). Al entrar a **Agendada**: aviso con fecha, hora y servicio que pide responder «1» para confirmar o «2» para cancelar. **24 h antes** de la cita: recordatorio, solo si no está Confirmada. **12 h antes**: si sigue Agendada, entrada en la bandeja para que el dueño llame. **2 h antes**: recordatorio, esté Agendada o Confirmada. **2 h después** de la hora de la cita: si el caso no es terminal, entrada en la bandeja «¿asistió?» con las opciones Atendida y No asistió; el sistema no cambia el estado solo. «1» pasa el caso a Confirmada; «2», a Cancelada con una entrada informativa. |
 
 ---
 
@@ -252,18 +238,18 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-03c** Dado un flujo activo en versión 1 con una ejecución en curso, cuando se modifica y se activa la versión 2, entonces la ejecución en curso termina con la versión 1 y las nuevas ejecuciones usan la 2 (RN-11).
 - **CA-03d** Dado un flujo activo, cuando se desactiva, entonces no se crean ejecuciones nuevas y las que estaban en curso continúan hasta terminar.
 
-**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a un estado). En EXT se añade el evento «artefacto nuevo» (CA-61e).
+**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a un estado, o el cliente responde, RF-36). En EXT se añade el evento «artefacto nuevo» (CA-61e).
 - **CA-04a** Dado un flujo activo cuyo evento es "el caso entra a Cotización enviada", cuando un caso entra a ese estado, entonces se crea exactamente una ejecución asociada a ese caso y a la versión vigente.
 - **CA-04b** Dado que no hay flujo activo para ese evento, cuando un caso cambia de estado, entonces el cambio se completa y no se crea ejecución.
 
-**RF-05 (M, MVP) Condiciones.** Un nodo Condición evalúa datos del caso y elige una rama.
+**RF-05 (M, MVP) Condiciones.** Un nodo Condición evalúa datos del caso (y, en un flujo disparado por una respuesta, el texto de la respuesta) y elige una rama.
 - **CA-05a** Dada una condición "monto > 1000" con ramas verdadero, falso y por defecto, cuando el monto es 1500 entonces sigue verdadero; con 500, falso; sin monto, la rama por defecto.
 - **CA-05b** Cuando la condición usa un dato inexistente, entonces la ejecución no se detiene, sigue por la rama por defecto y el hecho queda registrado.
 
 **RF-06 (M, MVP) Catálogo de acciones registradas.** Una acción solo puede usarse en un flujo si está **registrada** en la instalación (los plugins pueden registrar más, RF-80). Acciones del MVP: **Enviar aviso al cliente**, **Llamar webhook** (RF-16), **Notificar al dueño** (entrada en la bandeja), **Cambiar estado del caso** (solo a los destinos que el paquete permite al sistema) y **Registrar nota** en el caso. En EXT se añaden las acciones de agente de RF-15.
 - **CA-06a** Dado un caso con consentimiento y contacto válido, cuando se ejecuta Enviar aviso, entonces el canal recibe exactamente un mensaje con la plantilla rellena y el aviso queda registrado como "enviado".
 - **CA-06b** Cuando se ejecuta Notificar al dueño, entonces aparece una entrada en la bandeja con el texto y el caso.
-- **CA-06c** Dado un flujo cuya acción Cambiar estado apunta a un estado que el paquete no permite que el sistema asigne (en «Reparaciones», solo Sin respuesta), cuando se valida, entonces es inválido (RN-10).
+- **CA-06c** Dado un flujo cuya acción Cambiar estado apunta a un estado que el paquete no permite que el sistema asigne (en «Reparaciones», solo Sin respuesta; en «Citas», Confirmada, Cancelada y Agendada), cuando se valida, entonces es inválido (RN-10).
 - **CA-06d** Cuando se ejecuta Registrar nota, entonces la nota aparece en la línea de tiempo del caso (RF-26).
 - **CA-06e** Dado un flujo con una acción no registrada, cuando se valida, entonces es inválido y el error nombra la acción (RN-10).
 
@@ -313,6 +299,15 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-16e** Cada llamada lleva una referencia única en una cabecera, para que el receptor deduplique (RN-06).
 - **CA-16f** Una URL con formato inválido hace inválido el flujo al validarlo (RN-10).
 
+**RF-17 (M, MVP) Temporizador anclado a una fecha del caso.** Un nodo Temporizador puede esperar hasta un campo ancla del caso más o menos un desplazamiento (RN-32, RN-33).
+- **CA-17a** Dado un caso con `fecha_cita` el 10/12 a las 15:00 y un temporizador «24 h antes», cuando la ejecución llega al nodo, entonces espera hasta el 09/12 a las 15:00 (hora del negocio) y continúa al llegar.
+- **CA-17b** Dado que el instante calculado ya pasó cuando la ejecución llega al nodo, entonces el paso se omite sin enviar nada y el historial registra «instante vencido».
+- **CA-17c** Dado un caso con temporizadores anclados pendientes, cuando se cambia el campo ancla, entonces todos se recalculan con la nueva fecha y ninguno conserva la anterior.
+- **CA-17d** Dado un recordatorio ya enviado para la fecha anterior, cuando se cambia la fecha, entonces el recordatorio de la nueva fecha se envía una sola vez y el anterior no se repite (RN-33).
+- **CA-17e** Dado un temporizador anclado a un campo que no existe en el paquete o que no es de fecha, cuando se valida el flujo, entonces es inválido y el error nombra el campo (RN-10).
+- **CA-17f** Dado un aviso «antes de» que la ventana horaria llevaría después de la fecha ancla, entonces no se envía y aparece una entrada en la bandeja (RN-32).
+- **CA-17g** Dado un caso que llega a un estado terminal, entonces sus temporizadores anclados pendientes se cancelan (RN-05).
+
 **RF-18 (M, MVP) Estados de la ejecución.**
 - **CA-18a** Para cada par de estados de la sección 6.1, la transición se acepta si está permitida y se rechaza si no (prueba parametrizada sobre la tabla completa).
 - **CA-18b** Una ejecución en estado terminal no cambia de estado.
@@ -328,7 +323,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-20c** Cuando el contacto tiene formato inválido, entonces se rechaza.
 - **CA-20d** Dados dos registros simultáneos, entonces los folios son distintos (RN-14).
 
-*Nota (v0.4):* "contacto" se valida según el canal elegido (RF-31). Con canal Telegram, el consentimiento queda pendiente hasta la vinculación (RF-32); con correo y WhatsApp, lo registra el dueño al crear el caso (RN-26).
+*Nota:* "contacto" se valida según el canal elegido (RF-31). Con canal Telegram, el consentimiento queda pendiente hasta la vinculación (RF-32); con correo y WhatsApp, lo registra el dueño al crear el caso (RN-26).
 
 **RF-21 (M, MVP) Cambiar estado.**
 - **CA-21a** Para **cada** par origen-destino de la tabla de transiciones del paquete activo (en «Reparaciones», la sección 6), el cambio se acepta si el par está permitido y se rechaza con motivo si no lo está, sin cambiar el estado. (Prueba parametrizada sobre la tabla completa; la misma prueba se ejecuta sobre cualquier paquete.)
@@ -339,7 +334,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-22a** Dado un caso En diagnóstico, cuando se registra un monto mayor que 0 y se marca como enviada, entonces el caso pasa a Cotización enviada.
 - **CA-22b** Cuando el monto es 0, negativo o no numérico, entonces se rechaza.
 
-**RF-23 (M, MVP) Respuesta del cliente.** El dueño registra la respuesta (D-02).
+**RF-23 (M, MVP) Respuesta del cliente.** El dueño registra la respuesta.
 - **CA-23a** Dado un caso en Cotización enviada o Sin respuesta, cuando el dueño registra aprobación, entonces pasa a Aprobada; cuando registra rechazo, pasa a Rechazada.
 
 **RF-24 (M, MVP) Listado y búsqueda.**
@@ -369,13 +364,13 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-29a** Cada entrada muestra caso, motivo y fecha, y puede marcarse como resuelta.
 - **CA-29b** Las entradas sin resolver persisten tras cerrar sesión y tras reiniciar el sistema.
 
-**RF-31 (M, MVP) Canal de aviso por caso.** Cada caso tiene un canal registrado en la instalación (en el MVP: Correo, SMS o WhatsApp) y los avisos se envían por ese canal.
+**RF-31 (M, MVP) Canal de aviso por caso.** Cada caso tiene un canal registrado en la instalación (en el MVP: Correo, SMS, WhatsApp o Messenger) y los avisos se envían por ese canal.
 - **CA-31a** Dado el canal Correo, cuando se registra una dirección con formato inválido, entonces se rechaza; con formato válido, se acepta.
 - **CA-31b** Dado un caso con canal Correo y otro con canal WhatsApp con consentimiento, cuando se envía un aviso a cada uno, entonces el correo simulado recibe exactamente 1 mensaje del primero y ninguno del segundo, y el WhatsApp simulado recibe exactamente 1 mensaje del segundo y ninguno del primero.
 - **CA-31c** Dado un caso cuyo canal exige un consentimiento o una vinculación aún no registrados (WhatsApp sin opt-in o, en EXT, Telegram sin vincular), cuando se intenta enviar un aviso, entonces no se envía nada y aparece una entrada en la bandeja (RN-07).
 - **CA-31d** Un caso no cambia de canal una vez que tiene avisos enviados.
 
-**RF-32 (S, EXT) Vinculación de Telegram.** Para el canal Telegram, el sistema genera un enlace único por caso; el cliente lo abre e inicia la conversación, y el caso queda vinculado. *Telegram pasa a EXT (D-15).*
+**RF-32 (S, EXT) Vinculación de Telegram.** Para el canal Telegram, el sistema genera un enlace único por caso; el cliente lo abre e inicia la conversación, y el caso queda vinculado.
 - **CA-32a** Dado un caso con canal Telegram, cuando se registra, entonces se genera un enlace de vinculación único para ese caso y el caso queda con "vinculación pendiente".
 - **CA-32b** Dado un enlace válido, cuando el cliente inicia la conversación, entonces el caso queda vinculado y el consentimiento queda registrado con su fecha.
 - **CA-32c** Dado un enlace ya usado, cuando se usa de nuevo (por la misma persona u otra), entonces no se modifica la vinculación existente.
@@ -385,7 +380,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-33b** Dado un estado informado que retrocede (de "leído" a "entregado"), entonces se ignora y el hecho queda registrado.
 - **CA-33c** Dado un estado "fallido" informado por el canal, entonces el aviso queda "fallido" y aparece una entrada en la bandeja.
 
-**RF-34 (C, EXT) Aviso asistido por WhatsApp.** El sistema deja el mensaje preparado y el dueño lo envía desde su propio WhatsApp con un toque (H-39).
+**RF-34 (C, EXT) Aviso asistido por WhatsApp.** El sistema deja el mensaje preparado y el dueño lo envía desde su propio WhatsApp con un toque.
 - **CA-34a** Dado un caso con WhatsApp asistido, cuando vence un aviso, entonces se crea una entrada en la bandeja con el texto y un enlace que abre el chat con el texto escrito.
 - **CA-34b** El aviso queda "enviado" solo cuando el dueño lo marca (RN-28).
 
@@ -397,6 +392,27 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-35e** Dado el tope mensual alcanzado, cuando se intenta enviar, entonces el aviso queda "retenido por tope", no se envía y aparece una entrada en la bandeja (RN-27).
 - **CA-35f** Cada mensaje enviado registra categoría y costo estimado, y el total del mes es consultable (RN-27).
 - **CA-35g** El estado de cada plantilla se muestra al operador y solo cambia por el flujo de aprobación (RF-93).
+
+**RF-36 (M, MVP) Respuestas del cliente por el canal.** Un mensaje entrante de WhatsApp o Messenger se asocia a un caso (RN-34) y emite el evento «el cliente responde». Correo y SMS no reciben respuestas en el MVP: el dueño las registra (RF-23).
+- **CA-36a** Dado un caso con canal WhatsApp y un mensaje entrante de su contacto, entonces el mensaje aparece en la línea de tiempo del caso, el evento se emite una vez y se abre la ventana de conversación de 24 h (RN-24).
+- **CA-36b** Dado el mismo mensaje entregado dos veces con el mismo identificador externo, entonces se registra uno solo y se emite un solo evento.
+- **CA-36c** Dado un flujo con evento «el cliente responde» y una condición `respuesta = "1"` que cambia el caso a Confirmada, cuando llega « 1 » (con mayúsculas, acentos o espacios distintos), entonces el caso pasa a Confirmada y se cancelan sus recordatorios de confirmación pendientes (RN-05).
+- **CA-36d** Dado un mensaje entrante que ninguna condición reconoce, entonces el estado no cambia y se crea una entrada en la bandeja con el texto y el caso.
+- **CA-36e** Dado un mensaje entrante de un contacto sin caso abierto, entonces se crea una entrada en la bandeja con el texto y no se crea ningún caso.
+- **CA-36f** Dado un contacto con dos casos abiertos, cuando escribe, entonces el mensaje se asocia al más reciente y aparece una entrada en la bandeja que lo advierte.
+- **CA-36g** Dado un cliente que escribe «baja» o «stop», entonces no se le envía ningún aviso más y aparece una entrada en la bandeja (RN-35).
+
+**RF-37 (M, MVP) Canal Messenger.** Messenger es un canal por caso, con respuestas (RF-36) y la ventana de conversación de RN-36.
+- **CA-37a** Dado un caso con canal Messenger cuyo cliente escribió hace menos de 24 h, cuando se envía un aviso, entonces el simulador de Messenger recibe exactamente un mensaje.
+- **CA-37b** Dado el último mensaje del cliente hace más de 24 h, cuando se intenta enviar, entonces no se envía, el aviso queda «bloqueado por ventana» y aparece una entrada en la bandeja (RN-36).
+- **CA-37c** Un caso con canal Messenger solo se crea desde una consulta (RF-38) y su contacto es el identificador de la conversación; no se pide teléfono ni correo.
+
+**RF-38 (S, MVP) Consultas de Marketplace.** Un mensaje de Messenger marcado con origen Marketplace, de una persona sin caso abierto, crea una consulta (RN-37).
+- **CA-38a** Dado ese mensaje, entonces aparece una consulta con texto, nombre, publicación de origen y fecha, y no se crea ningún caso.
+- **CA-38b** Dada una consulta, cuando el dueño la convierte, entonces se piden los campos obligatorios que falten y se crea un caso en el paquete activo con canal Messenger, el nombre y el contacto de la consulta y el consentimiento registrado (RN-36).
+- **CA-38c** Dada una consulta descartada, entonces queda registrada y no vuelve a mostrarse.
+- **CA-38d** Dado un mensaje nuevo de la misma persona sobre la misma publicación, entonces se agrega a la consulta abierta y no se crea otra.
+- **CA-38e** Dado el mismo mensaje entregado dos veces, entonces se crea una sola consulta.
 
 ### 8.3 Acceso
 
@@ -430,14 +446,34 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-50e** Dado un segundo paquete sintético de prueba, cuando se ejecuta la misma suite de conformidad, entonces pasa sin escribir pruebas nuevas.
 - **CA-50f** Dado un paquete que incluye un flujo inválido según RN-10, cuando se valida, entonces el paquete es inválido.
 
-**RF-51 (S, MVP) Campos comunes y campos propios.** Los campos comunes (folio, nombre, contacto, canal, estado, fecha) son siempre consultables; los propios se validan contra el esquema del paquete.
+**RF-51 (M, MVP) Campos comunes y campos propios.** Los campos comunes (folio, nombre, contacto, canal, estado, fecha) son siempre consultables. Los propios se validan contra el esquema del paquete; el paquete puede declararlos filtrables, buscables o campo ancla.
 - **CA-51a** Dados casos de dos paquetes distintos, cuando se busca por nombre, entonces se devuelven casos de ambos.
 - **CA-51b** Dado un campo propio obligatorio ausente, cuando se registra el caso, entonces se rechaza indicando el campo; un valor de tipo incorrecto también se rechaza.
 - **CA-51c** Un campo propio se muestra en el caso y su cambio aparece en la línea de tiempo.
+- **CA-51d** Dado un campo propio filtrable, cuando se filtra por él (igualdad, y rango si es fecha), entonces se devuelven exactamente los casos que coinciden.
+- **CA-51e** Dado un campo propio de texto buscable, cuando se busca un texto parcial sin distinguir mayúsculas, entonces se devuelven los casos que lo contienen.
+- **CA-51f** Con 1 000 casos, filtrar por un campo propio filtrable tarda p95 ≤ 2 s (RNF-03).
+- **CA-51g** Un campo propio no declarado filtrable ni buscable no puede usarse como filtro y el error lo dice.
+
+**RF-52 (M, MVP) Paquete «Citas».** Segundo paquete real, entregado como dato con los estados, campos y flujo de la sección 6.2 y de RN-38.
+- **CA-52a** Dado el paquete «Citas», cuando se ejecuta la suite de conformidad, entonces pasa CA-21a y CA-21c sobre su tabla completa (CA-50d).
+- **CA-52b** Dado un caso de «Citas» sin `fecha_cita` o sin `servicio`, cuando se registra, entonces se rechaza indicando el campo; una `fecha_cita` en el pasado también se rechaza.
+- **CA-52c** Dado un caso Agendado o Confirmado cuya franja (`fecha_cita` y `duracion`) se traslapa con otro caso Agendado o Confirmado, cuando se agenda o se reprograma, entonces se muestra una advertencia con el caso en conflicto y la acción se permite.
+- **CA-52d** Dado un caso Confirmado, cuando se cambia su `fecha_cita`, entonces vuelve a Agendada y se pide confirmar de nuevo (RN-33).
+- **CA-52e** La vista «Agenda del día» muestra los casos Agendados y Confirmados de un día, ordenados por hora.
+
+**RF-53 (M, MVP) Flujo «Seguimiento de cita».** Viene instalado, activo y válido con el paquete; implementa RN-38 sobre RF-17 y RF-36.
+- **CA-53a** Tras instalar el paquete, el flujo existe, está activo y pasa la validación.
+- **CA-53b** Dada una cita para las 15:00 del día X, y un caso que entra a Agendada 3 días antes a las 10:00 sin respuesta del cliente: aviso inmediato; recordatorio un día antes a las 15:00; entrada en la bandeja a las 03:00 del día X; recordatorio a las 13:00; entrada «¿asistió?» a las 17:00.
+- **CA-53c** Dada la respuesta «1» dos días antes de la cita: el caso pasa a Confirmada y no hay recordatorio de 24 h ni entrada de 12 h; el recordatorio de 2 h sí se envía.
+- **CA-53d** Dada la respuesta «2»: el caso pasa a Cancelada, se cancelan las esperas pendientes y aparece una entrada informativa.
+- **CA-53e** Dado un cambio de `fecha_cita` a otro día, entonces los recordatorios se calculan para la nueva fecha y ninguno queda para la anterior (CA-17c).
+- **CA-53f** Dada una cita que se agenda 1 h antes de su hora: se envía el aviso inmediato y se omiten los recordatorios de 24 h, 12 h y 2 h (CA-17b).
+- **CA-53g** Dada una cita pasada que sigue Agendada o Confirmada, cuando el dueño elige «No asistió», entonces el caso pasa a No asistió; el sistema no cambia el estado por sí mismo (RN-13).
 
 ### 8.6 Simulador de APIs de terceros
 
-**RF-90 (M, MVP) Simulador de APIs de terceros.** El producto incluye un simulador con receptores de **correo**, **SMS**, **WhatsApp** y **HTTP POST**. Registra lo recibido (instante, destino, contenido, referencia), descarta duplicados con la misma referencia y es consultable desde la interfaz del operador.
+**RF-90 (M, MVP) Simulador de APIs de terceros.** El producto incluye un simulador con receptores de **correo**, **SMS**, **WhatsApp**, **Messenger** y **HTTP POST**. Registra lo recibido (instante, destino, contenido, referencia), descarta duplicados con la misma referencia y es consultable desde la interfaz del operador.
 - **CA-90a** Dado un aviso por correo, cuando se envía, entonces el simulador lo muestra con destinatario, asunto, cuerpo y referencia.
 - **CA-90b** Dados un SMS y un HTTP POST, cuando se envían, entonces el simulador los muestra con destino, contenido y referencia.
 - **CA-90c** Dados dos mensajes con la misma referencia, entonces el simulador registra uno solo (CA-11b).
@@ -460,6 +496,12 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-93a** Una plantilla enviada a revisión queda "en revisión" y pasa a "aprobada" o "rechazada" por acción del operador o tras un retraso configurable.
 - **CA-93b** Una plantilla rechazada incluye un motivo.
 
+**RF-94 (M, MVP) Simulador de Messenger, mensajes entrantes y Marketplace.**
+- **CA-94a** Dado un aviso por Messenger, entonces el simulador lo muestra con el identificador de la conversación, el contenido y la referencia.
+- **CA-94b** Dado un mensaje del negocio fuera de la ventana de 24 h, cuando llega al simulador, entonces lo rechaza con un código de error que identifica el motivo (RN-36).
+- **CA-94c** El operador puede simular un mensaje entrante del cliente por WhatsApp o Messenger, desde la interfaz del simulador y desde las pruebas, con un identificador externo único y, en Messenger, con origen Marketplace y publicación de origen.
+- **CA-94d** El simulador entrega el mensaje entrante al sistema por HTTP y, si el sistema no responde con éxito, reintenta con el mismo identificador externo (RN-34).
+
 ### 8.7 Extensibilidad
 
 **RF-80 (S, MVP) Contrato de extensión.** Una acción, un canal o un lector de fuentes se añade como plugin sin modificar el motor. Cada plugin declara nombre, versión del contrato y el esquema de sus parámetros. *Límite declarado: los plugins son código de confianza, sin aislamiento de seguridad.*
@@ -472,8 +514,9 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-81a** Existe un plugin de ejemplo con documentación paso a paso para crear uno propio.
 - **CA-81b [HUMANO]** Una persona ajena al proyecto añade el plugin de ejemplo a una instalación limpia siguiendo la documentación, sin pasos no descritos.
 
-**RF-82 (C, EXT) Canal de WhatsApp real como plugin.**
+**RF-82 (C, EXT) Canales reales de WhatsApp y Messenger como plugin.**
 - **CA-82a** El adaptador de la API oficial de WhatsApp implementa el mismo contrato que el simulador y se activa por configuración.
+- **CA-82b** El adaptador de Messenger implementa el mismo contrato, recibe los mensajes entrantes por el mismo punto de entrada (RF-36) y se activa por configuración.
 
 ### 8.8 Pasos de agente (EXT)
 
@@ -541,7 +584,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RNF-10 | **Privacidad de salida de datos (EXT).** | **CA-N10a** Ningún dato de una fuente deshabilitada se envía al proveedor de modelo. **CA-N10b** Los contactos se enmascaran antes de enviarse. **CA-N10c** Existe un registro de salida consultable por el dueño con qué se envió (artefacto, campos, destino, hora). |
 | RNF-11 | **Evaluabilidad de los agentes (EXT).** | **CA-N11a** Las pruebas de aceptación que involucran agentes usan respuestas grabadas y son deterministas. **CA-N11b** La evaluación contra el corpus (RH-15) se ejecuta aparte con un modelo real, reporta las métricas de RH-16 y no bloquea la suite (CA-N08c). |
 | RNF-12 | **Retención (EXT).** | **CA-N12a** Artefactos y textos extraídos se eliminan automáticamente a los 30 días salvo que se renueven. **CA-N12b** A petición del dueño, el borrado completo ocurre en 1 min o menos (CA-60c). |
-| RNF-13 | **Preparación para código abierto.** | **CA-N13a** El repositorio contiene archivo de licencia, README con instalación y ejecución, y guía de contribución. **CA-N13b** Una comprobación automática no encuentra secretos (claves o contraseñas) en el repositorio. **CA-N13c [HUMANO]** Las dependencias y sus licencias están listadas y son compatibles con la licencia elegida (OQ-15). |
+| RNF-13 | **Preparación para código abierto.** | **CA-N13a** El repositorio contiene archivo de licencia, README con instalación y ejecución, y guía de contribución. **CA-N13b** Una comprobación automática no encuentra secretos (claves o contraseñas) en el repositorio. **CA-N13c [HUMANO]** Las dependencias y sus licencias están listadas y son compatibles con la licencia elegida. |
 | RNF-14 | **Instalación reproducible.** | **CA-N14a [HUMANO]** Desde un repositorio limpio, siguiendo el README, el sistema queda funcionando con datos de demostración y el simulador en 15 min o menos. |
 
 ---
@@ -558,9 +601,9 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RH-04 | **Registro por tarea.** Se registra: modelo, tarea, inicio y fin, iteraciones, consumo de uso o costo estimado, resultado e intervenciones humanas. | Cada tarea ejecutada tiene su registro completo. |
 | RH-05 | **Reproducibilidad.** Una tarea puede repetirse desde un estado base identificado del repositorio. | Dos ejecuciones desde el mismo estado base usan la misma entrada y la misma especificación. |
 | RH-06 | **Retroalimentación legible por agentes.** Un fallo indica el CA incumplido y qué se esperaba frente a qué se obtuvo. | Todo fallo de la suite cita un ID de CA. |
-| RH-07 | **Reglas estructurales.** El arnés verifica automáticamente las reglas de estructura definidas en [arquitectura.md](arquitectura.md), sección 6 (AR-01 a AR-09). | Todas las reglas AR se ejecutan en cada corrida del arnés; una violación hace fallar la corrida con un mensaje de remediación. |
+| RH-07 | **Reglas estructurales.** El arnés verifica automáticamente las reglas de estructura definidas en [arquitectura.md](arquitectura.md), sección 3 (AR-01 a AR-18). | Todas las reglas AR se ejecutan en cada corrida del arnés; una violación hace fallar la corrida con un mensaje de remediación. |
 | RH-08 | **Métricas.** M1 tareas aprobadas a la primera; M2 iteraciones por tarea; M3 intervenciones humanas por tarea; M4 regresiones tras un cambio de requisito; M5 consumo de uso por tarea; M6 tiempo hasta pasar todas las pruebas. | Las seis se calculan a partir de los registros de RH-04. |
-| RH-09 | **Comparación con y sin arnés.** Las mismas tareas se ejecutan con y sin arnés, y entre los modelos disponibles. | Mínimo 8 tareas por condición (a ajustar según presupuesto, H-21). |
+| RH-09 | **Comparación con y sin arnés.** Las mismas tareas se ejecutan con y sin arnés, y entre los modelos disponibles. | Mínimo 8 tareas por condición (a ajustar según presupuesto). |
 | RH-10 | **Escalabilidad.** M1 a M5 se miden cuando está implementado el 25 %, 50 % y 100 % de los RF de prioridad M. | Tres puntos de medición registrados. |
 | RH-11 | **Cambios de requisito controlados.** Se introducen al menos 2 (por ejemplo, cambiar los plazos de RN-03 y añadir un estado "Garantía"). | Para cada cambio se registran: pruebas que fallan, archivos modificados e intervenciones. |
 | RH-12 | **Revisión humana.** Cada cambio integrado tiene un revisor humano y una lista de comprobación. | 100 % de los cambios integrados con revisor registrado. Los autores pueden explicar cada parte entregada **[HUMANO]**. |
@@ -570,110 +613,3 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RH-16 | **Métricas de descubrimiento (EXT).** Precisión y exhaustividad de la extracción por tipo de fuente; proporción de estados esperados presentes en el paquete propuesto; proporción de propuestas aceptadas sin edición. | Se calculan sobre el corpus con un modelo real en cada punto de medición de RH-10. |
 | RH-17 | **Respuestas grabadas (EXT).** Las pruebas con agentes usan respuestas del modelo grabadas, versionadas y reproducibles. | Regrabar una respuesta requiere aprobación humana (RH-02). |
 | RH-18 | **Añadir un plugin como cambio controlado.** Mide la extensibilidad con el mismo experimento. | Se añade el plugin de ejemplo siguiendo la documentación y se registran: archivos del motor modificados (meta: 0), pruebas que fallan e intervenciones. |
-
----
-
-## 11. Trazabilidad
-
-| Necesidad | Requisitos | Reglas |
-|---|---|---|
-| N-01 | RF-04, RF-06, RF-07, RF-25, RF-31, RF-32 | RN-02, RN-03, RN-05 |
-| N-02 | RF-25, RF-28, RF-29 | RN-04, RN-13 |
-| N-03 | RF-04, RF-07, RF-29 | RN-03, RN-04 |
-| N-04 | RF-20, RF-24, RNF-01 | RN-14 |
-| N-05 | RNF-01, RNF-02, RF-30 | (CA-N01c) |
-| N-06 | RF-01, RF-02, RF-03, RF-40, RF-41 | RN-10, RN-11 |
-| N-07 | RF-15, RF-50, RF-51, RF-60 a RF-63 | RN-17 a RN-20 |
-| N-08 | RF-15, RF-70 a RF-72 | RN-15, RN-16, RN-21 |
-| N-09 | RF-80 a RF-82, RNF-13 | RN-31 |
-| Enunciado del profesor | RF-02, RF-14, RF-16, RF-18, RF-40, RF-90 a RF-92 (ver sección 1.1) | RN-10, RN-29, RN-30 |
-| WhatsApp con restricciones | RF-31, RF-33, RF-35, RF-92, RF-93 | RN-24 a RN-28 |
-| Confiabilidad del motor | RF-08 a RF-13, RNF-04 a RNF-06 | RN-05, RN-06, RN-09, RN-12 |
-
----
-
-## 12. Decisiones y preguntas abiertas
-
-### Decisiones
-
-| ID | Decisión | Estado |
-|---|---|---|
-| D-01 | **Los flujos del MVP son grafos sin ciclos.** Las repeticiones acotadas (recordatorios, reintentos) son propiedades de los nodos, no ciclos del diagrama. | Confirmado (2026-11-12) |
-| D-02 | En el MVP el dueño registra manualmente la respuesta del cliente. | Confirmado (2026-11-12) |
-| D-03 | El MVP atiende a **un negocio** por instalación. El aislamiento entre negocios es EXT. | Confirmado (2026-11-12) |
-| D-04 | Las notificaciones al dueño son solo entradas en la bandeja. | Confirmado (2026-11-12) |
-| D-05 | Canales de aviso: Correo, SMS y WhatsApp en el MVP (SMS y WhatsApp simulados, D-15); Telegram y WhatsApp real en EXT. | Modificado el 2026-11-13 (antes: Correo y Telegram) |
-| D-06 | El editor visual es obligatorio, mínimo y solo para el operador. | Confirmado por el usuario (el profesor pidió una propuesta) |
-| D-07 | La generación de flujos por agentes queda fuera del MVP (EXT). | Confirmado por plazo; restablecida el 2026-11-13 por D-14 |
-| D-08 | Correo es el canal base. Telegram pasa a EXT (D-15). | Modificado el 2026-11-13 |
-| D-09 | Los procesos son **paquetes declarativos** desde el MVP (RF-50, RF-51); «Reparaciones» es el paquete de referencia, no código. | Propuesto por el analista; confirmar |
-| D-10 | El sistema mantiene su propio registro de casos, **derivado** de los artefactos con ingesta de solo lectura. No reemplaza los hábitos del negocio. La escritura de vuelta a Excel o Drive es FUT. | Propuesto por el analista; confirmar |
-| D-11 | Los agentes producen **datos** (casos candidatos, propuestas), **nunca código ni activaciones**. Toda activación requiere confirmación humana (RN-15). | Propuesto por el analista; confirmar |
-| D-12 | *(Reemplazada por D-14.)* La etapa MVP-V (MVP-visión) ya no existe. | Retirada el 2026-11-13 |
-| D-13 | El escenario de tres locales, con datos sintéticos, es la demostración y el corpus de pruebas de la visión (EXT). | Propuesto por el analista; confirmar |
-| D-14 | El descubrimiento desde artefactos, los pasos de agente y las propuestas pasan de la etapa MVP-V a **EXT**. El MVP se alinea con las cuatro tareas del enunciado. | Propuesto por el analista; confirmar |
-| D-15 | Los servicios de terceros del MVP se **simulan**: correo, SMS, WhatsApp y HTTP POST. El simulador modela las restricciones de WhatsApp. WhatsApp real, Telegram y el aviso asistido son EXT. | Propuesto por el analista; confirmar |
-| D-16 | El simulador es un componente del producto y también el doble de pruebas del arnés: un solo componente (RF-90, RF-91). | Propuesto por el analista; confirmar |
-| D-17 | Monolito modular y PostgreSQL, sin Redis. La ejecución es una máquina de estados finita; no se usa Saga porque no hay transacciones distribuidas. Lo recomendado en el enunciado (microservicios, Redis, Saga) no es obligatorio: se adopta solo lo que los requisitos justifican. | Propuesto por el analista; confirmar |
-| D-18 | El proyecto se publica como código abierto; la licencia se decide en OQ-15. | Propuesto por el analista; confirmar |
-
-### Preguntas abiertas
-
-| ID | Pregunta |
-|---|---|
-| OQ-01 | ¿Qué política legal aplica a equipos abandonados? Los 30 días de RN-04 son un valor provisional. |
-| OQ-02 | ¿Cómo se maneja una reparación en garantía? |
-| OQ-03 | ¿Se puede cancelar un caso En reparación? Hoy no. |
-| OQ-04 | ¿Puede entregarse un equipo ya marcado Abandonado? Hoy es terminal. |
-| OQ-05 | ¿Cómo se registra el consentimiento del cliente (verbal, firma, mensaje)? |
-| OQ-06 | ¿Cómo se trata el cambio de horario de verano en la ventana horaria? |
-| OQ-07 | ¿Qué rúbrica aplica el profesor y qué dice sobre uso de agentes (H-20)? |
-| OQ-08 | ¿Cuántas tareas y modelos caben en el presupuesto de uso (H-21)? |
-| OQ-09 | ¿Los valores de RN-03, RN-04 y RNF-01 coinciden con lo que los dueños dicen en entrevista? |
-| OQ-10 | ¿Qué proveedor de modelo se usa y con qué presupuesto (H-21)? |
-| OQ-11 | ¿El umbral de confianza de 0,7 es adecuado? Se calibra con el corpus (RH-16). |
-| OQ-12 | ¿Cómo se leen las imágenes: visión del modelo o reconocimiento de texto aparte? |
-| OQ-13 | ¿Qué política de salida de datos aplica por defecto: habilitar fuente por fuente (propuesto) u otra? |
-| OQ-14 | Si se vende el servicio, ¿qué condiciones de uso y de privacidad aplican por los datos de los clientes de cada negocio? |
-| OQ-15 | ¿Qué licencia de código abierto se usa? |
-| OQ-16 | *(Resuelta el 2026-11-13: el profesor indicó que la arquitectura del enunciado es una recomendación, no una exigencia.)* |
-| OQ-17 | ¿Cuál es el tope mensual de WhatsApp por defecto y qué tarifas se simulan (OQ-10 aplica a modelos)? |
-
-### Hipótesis a verificar
-
-H-03 El dueño no es técnico. H-15 La API oficial de WhatsApp exige plantillas aprobadas y plazos de verificación. H-16 El dolor principal es el olvido y el seguimiento. H-17 Los clientes aceptan recibir avisos. H-20 La política académica admite código generado por agentes. H-21 Las suscripciones permiten el número de ejecuciones del experimento. H-22 Los equipos no recogidos son un problema frecuente. H-23 Un registro de 15 s compite con la libreta. H-24 Los operadores prefieren plantillas editables a flujos escritos desde cero. H-25 Las versiones de plataformas y paquetes citadas en arquitectura.md son las vigentes. H-28 Un bot de Telegram no puede iniciar una conversación con un usuario hasta que este la inicia; por eso hace falta la vinculación (RF-32). Es mi conocimiento y debe verificarse. H-29 Enviar datos del negocio a un proveedor de modelo es aceptable para los dueños si cada fuente se habilita explícitamente y los contactos se enmascaran. H-30 Los chats de WhatsApp solo pueden ingresarse como exportación manual: la API oficial no da acceso al historial de la aplicación (conocimiento propio; verificar). H-31 Los modelos extraen casos con precisión suficiente de fotos de libreta manuscrita (desconocido). H-32 El dueño reconoce sus procesos en una propuesta y le aporta valor; en el escenario de tres locales el proceso es casi el mismo y el valor está en la extracción (no verificada). H-33 Los artefactos de los tres locales descritos son representativos de negocios reales (los plantea el equipo; no hay datos verificados). H-27 Las librerías de diagramas para Blazor no se evaluaron: su encaje con RF-40 y el desempeño de los agentes con ellas son desconocidos. H-34 La licencia de n8n restringe ofrecerlo como servicio alojado a terceros, y la consultoría sobre él está permitida (verificar con n8n). H-35 Los dueños pagarían por el servicio. H-36 Una persona puede dar soporte a varios locales. H-37 La titularidad del código generado por agentes permite publicarlo con la licencia elegida (revisar los términos de cada proveedor). H-38 Existe un hueco frente a alternativas abiertas (validación previa, paquetes adaptables, descubrimiento) y hay desarrolladores que querrían extender el motor. H-39 Un enlace de chat con texto prellenado permite al dueño enviar por WhatsApp con un toque. H-40 Las reglas de WhatsApp (ventana de 24 h, consentimiento, plantillas aprobadas, costo por mensaje) son las modeladas en RN-24 a RN-27; solo plantillas, verificación de la cuenta y costo por mensaje aparecen en las fuentes consultadas.
-
----
-
-## 13. Riesgos
-
-| ID | Riesgo | Mitigación |
-|---|---|---|
-| RI-01 | Plazo de 20 días insuficiente | Alcance alineado con el enunciado; descubrimiento en EXT (D-14); escalera de recortes de la sección 2; prioridades M/S/C |
-| RI-02 | Las entrevistas contradicen las hipótesis | Revisar la versión 0.2 con los hallazgos antes de congelar la especificación |
-| RI-03 | Cambios de requisito contaminan las mediciones | Versionado y congelamiento por etapas (RH-13) |
-| RI-04 | Agotar el uso de los modelos | RH-14 |
-| RI-05 | El equipo no entiende lo generado por agentes | RH-12 |
-| RI-06 | Un canal de aviso impone aprobaciones o costos no previstos | D-05; doble de canal en pruebas (RNF-08) |
-| RI-07 | Los canales simulados se confunden con servicios reales en una demostración | La interfaz del simulador declara que es una simulación (CA-90f); WhatsApp real es EXT (D-15) |
-| RI-08 | Las reglas de WhatsApp modeladas difieren de las reales | Marcadas como hipótesis (H-40); el adaptador real es EXT y se validaría contra la plataforma |
-| RI-09 | Datos del negocio y de sus clientes salen a un proveedor externo | RN-20, RNF-10, habilitación explícita por fuente (H-29) |
-| RI-10 | Las salidas de los agentes no son deterministas | Respuestas grabadas (RH-17), validación de esquema, confirmación humana (RN-15) |
-| RI-11 | Precisión baja al leer fotos manuscritas | Las imágenes son parte de EXT; confianza y revisión humana (RN-17) |
-| RI-12 | Un proyecto abierto y extensible invita a más alcance del que cabe | Extensibilidad mínima (RF-80 a RF-82); comunidad y conectores fuera de alcance (FUT) |
-| RI-13 | La rúbrica podría valorar la arquitectura recomendada aunque no la exija | La arquitectura se justifica por requisitos (ADR-18); si se pidiera, separar el procesador de ejecución como proceso aparte |
-
----
-
-## 14. Historial de cambios
-
-| Versión | Fecha | Cambio |
-|---|---|---|
-| 0.1 | 2026-11-12 | Borrador provisional inicial. Sin validación con usuarios. |
-| 0.2 | 2026-11-12 | Confirmadas las decisiones D-01 a D-05. Sin cambios en RF, RN, RNF ni CA. |
-| 0.3 | 2026-11-12 | RH-07 enlaza con las reglas AR-01 a AR-09 de la arquitectura. Añadida H-25. Sin cambios en RF, RN, RNF ni CA. |
-| 0.4 | 2026-11-13 | Canales Correo y Telegram. Nuevos RF-31 y RF-32 (CA-31a a CA-32c), glosario, D-08, H-28, RI-07. RN-07 ampliada para Telegram (iniciar la conversación cuenta como consentimiento). Nota bajo RF-20: el contacto se valida según el canal; el significado de los CA-20a a CA-20d no cambia. |
-| 0.5 | 2026-11-13 | Confirmada la decisión D-08. Sin cambios en RF, RN, RNF ni CA. |
-| 0.6 | 2026-11-13 | Visión de adaptación a cada negocio: escenario de tres locales, etapa MVP-V, paquetes de proceso (RF-50, RF-51), pasos de agente (RF-15), fuentes, extracción y propuestas (RF-60 a RF-63, RF-70 a RF-72), RN-15 a RN-23, RNF-10 a RNF-12, RH-15 a RH-17, D-09 a D-13, H-29 a H-33. **Cambios de significado:** RN-01 y CA-21a se generalizan del paquete «Reparaciones» a «el paquete activo» (el comportamiento de «Reparaciones» no cambia). D-07 modificada. Sección 6 pasa a ser el paquete de referencia. |
-| 0.7 | 2026-11-13 | Alineación con el enunciado del profesor y con la visión abierta y extensible. Nuevos: sección 1.1, RF-14 (compilación a DAG), RF-16 (webhook saliente), RF-18 (estados de la ejecución), RF-33 a RF-35 (WhatsApp), RF-80 a RF-82 (extensibilidad), RF-90 a RF-93 (simulador), RN-24 a RN-31, RNF-13, RNF-14, RH-18, D-14 a D-18, OQ-14 a OQ-17, H-34 a H-40, RI-12, RI-13. **Cambios de etapa:** el descubrimiento y los pasos de agente pasan a EXT (la etapa MVP-V desaparece); Telegram pasa a EXT; RF-51 pasa a S. **Cambios de significado:** RF-06 (catálogo de acciones registradas), CA-06c, RF-31, CA-31b, CA-31c y RN-07 se generalizan para admitir varios canales y paquetes. D-05, D-07, D-08 y D-12 modificadas. |
-| 0.8 | 2026-11-13 | El profesor indicó que la arquitectura del enunciado es una recomendación, no una exigencia: se ajustan D-17, OQ-16, RI-13 y la fila de arquitectura de la sección 1.1. Sin cambios en RF, RN, RNF ni CA. |
