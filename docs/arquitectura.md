@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.8 |
-| Entrada | [requisitos.md](requisitos.md) v0.10 |
+| Versión | 0.9 |
+| Entrada | [requisitos.md](requisitos.md) v0.11 |
 | Razones, alternativas y riesgos | [humanos/](humanos/) (no necesario para implementar) |
 
 Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las versiones de paquetes son las que conozco: **verificarlas al instalar**. Las reglas de la sección 3 son ejecutables y alimentan RH-07.
@@ -73,13 +73,15 @@ Api ──► Discovery ──► Cases ──► Core
  └──► Infrastructure ───────────┘   (también depende de Cases y Discovery)
 ```
 
+En el MVP, `Discovery` no se crea y `Api` no lo referencia.
+
 - **Estructura de la solución:**
 
 ```
 src/
   WorkflowEngine.Core/
   WorkflowEngine.Cases/
-  WorkflowEngine.Discovery/
+  WorkflowEngine.Discovery/        (EXT; no se crea en el MVP)
   WorkflowEngine.Infrastructure/
   WorkflowEngine.Api/
   WorkflowEngine.Sdk/              contratos públicos de extensión (ADR-17)
@@ -110,7 +112,8 @@ AGENTS.md                         índice corto que remite a docs/
 - **Decisión:**
   - **Pruebas de aceptación** contra la aplicación completa en memoria (`WebApplicationFactory`), con PostgreSQL real de prueba (Testcontainers o una base dedicada), reloj falso y doble de canal.
   - Cada prueba lleva un atributo con su ID (por ejemplo `[Ac("CA-08a")]`). Un script cruza esos IDs con `docs/requisitos.md` y calcula la cobertura de CA (RH-01).
-  - **Archivos protegidos (RH-02):** `tests/Acceptance/` y `docs/requisitos.md`. Un chequeo en CI falla si un cambio los toca sin un marcador de aprobación humana en el commit (por ejemplo la línea `Approved-By:`).
+  - **Archivos protegidos (RH-02):** `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md` y la sección 3 de este documento. Un chequeo en CI falla si un cambio los toca sin un marcador de aprobación humana en el commit (por ejemplo la línea `Approved-By:`).
+  - **Oráculo separado:** las pruebas de aceptación del primer corte se escriben sin acceso a la implementación y una persona las revisa antes de congelarlas; el registro de tareas anota la condición (RH-04).
   - Los mensajes de fallo incluyen el ID del CA y qué se esperaba (RH-06).
   - Las pruebas de la interfaz (CA-40, CA-N02) usan un navegador automatizado (Playwright).
   - Las pruebas que involucran agentes usan **respuestas grabadas** de `tests/Fixtures/` (RH-17, CA-N11a); la evaluación con modelo real vive en `tests/Evaluation/` y no bloquea la suite (CA-N11b).
@@ -123,7 +126,7 @@ AGENTS.md                         índice corto que remite a docs/
 ### ADR-11 Paquetes de proceso declarativos (plugins de datos)
 - **Motivo:** RF-50 a RF-53, RN-21, RN-22, RN-38.
 - **Decisión:**
-  - Un **paquete** es un documento versionado, inmutable por versión: estados (inicial y terminales), transiciones, campos propios (tipo, obligatoriedad y si son filtrables, buscables o campo ancla), plantillas de aviso y flujos incluidos. El de «Reparaciones» vive en `packs/` como dato.
+  - Un **paquete** es un documento versionado, inmutable por versión: estados (inicial y terminales, y por cada uno si una persona puede entrar en él y si la acción «Cambiar estado» puede asignarlo), transiciones, campos propios (tipo, obligatoriedad y si son filtrables, buscables o campo ancla), plantillas de aviso y flujos incluidos. El de «Reparaciones» vive en `packs/` como dato.
   - Un **validador de paquetes** puro (RN-21) reutiliza el validador de flujos (RN-10) para los flujos incluidos.
   - `Cases` aplica la tabla de transiciones y valida los campos propios. Ningún código nombra un estado concreto (AR-10).
   - Un caso se guarda con **columnas comunes** (folio, nombre, contacto, canal, estado, fecha, versión de paquete) y un **documento JSON** para los campos propios, validado contra el esquema del paquete.
@@ -177,6 +180,11 @@ AGENTS.md                         índice corto que remite a docs/
   - **MVP:** el plugin de ejemplo se registra por referencia en la composición de `Api`. **EXT:** carga desde la carpeta `plugins/`.
 - **Límite declarado:** los plugins son **código de confianza**, sin aislamiento de seguridad. Un modelo seguro para plugins de terceros es otro proyecto.
 
+### ADR-18 Qué se adopta y qué no de la arquitectura recomendada
+- **Motivo:** el enunciado recomienda microservicios, Saga y Redis; ningún requisito del MVP los exige.
+- **Decisión:** se adoptan la máquina de estados finita (ADR-16), PostgreSQL (ADR-03) y el DAG ejecutable (ADR-16). **No** se adoptan microservicios, Saga ni Redis: el estado vive en una base de datos y las transacciones son locales; `FOR UPDATE SKIP LOCKED` sustituye a los bloqueos distribuidos.
+- **Límite:** no hay escalado independiente por componente. Si se exigiera, el procesador de ejecución se separa como proceso aparte que comparte la base de datos, sin cambiar el diseño.
+
 ### ADR-19 Respuestas entrantes y consultas
 - **Motivo:** RF-36 a RF-38, RN-34 a RN-37.
 - **Decisión:**
@@ -187,6 +195,11 @@ AGENTS.md                         índice corto que remite a docs/
   - **El motor no interpreta texto libre.** La Condición compara con valores declarados por el flujo, tras normalizar minúsculas, acentos y espacios. «baja» y «stop» se atienden antes que cualquier flujo (RN-35).
   - Las **consultas** viven en `Cases`. Convertir una consulta en caso exige `AprobacionHumana` (AR-14).
 - **Límite declarado:** el origen Marketplace es un dato que trae el mensaje en el simulador. Que las APIs reales de Meta lo entreguen a una aplicación de terceros no está verificado.
+
+### ADR-20 Unidad de trabajo y transacciones
+- **Motivo:** ADR-03 exige atomicidad por paso y RN-33 exige recalcular temporizadores en la misma transacción desde `Cases`.
+- **Decisión:** `Core` define `IUnitOfWork` con `ExecuteInTransactionAsync`. `Cases` y el motor componen operaciones dentro de un ámbito; `Infrastructure` lo implementa con EF Core. Ninguna capa abre transacciones por su cuenta.
+- **Regla:** AR-19.
 
 ---
 
@@ -245,7 +258,7 @@ Casos confirmados ─► paso agente «Proponer paquete» ─► validador de pa
 | AR-06 | Toda acción del catálogo está en el registro único y tiene al menos un CA que la ejercita | Prueba sobre el registro |
 | AR-07 | Ningún archivo de código supera 400 líneas | Comprobación en CI |
 | AR-08 | Todo CA de prioridad M tiene una prueba etiquetada | Script de trazabilidad (RH-01) |
-| AR-09 | `tests/Acceptance/`, `tests/Fixtures/` y `docs/requisitos.md` no cambian sin aprobación humana | Chequeo en CI (RH-02, RH-15, RH-17) |
+| AR-09 | `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md` y la sección 3 de este documento no cambian sin aprobación humana | Chequeo en CI (RH-02, RH-15, RH-17) |
 | AR-10 | Los estados y transiciones salen solo del paquete activo: ningún código de `Cases`, `Discovery` ni `Api` nombra un estado concreto de un paquete | Prueba de arquitectura y búsqueda de literales; los paquetes viven en `packs/` |
 | AR-11 | Los lectores de fuentes no tienen operaciones de escritura y la ingesta deja los archivos con la misma huella | Prueba de arquitectura y CA-61a |
 | AR-12 | Solo `Infrastructure` referencia clientes de modelos, y el adaptador real exige el filtro de enmascarado | Prueba de arquitectura y prueba de construcción |
@@ -255,5 +268,6 @@ Casos confirmados ─► paso agente «Proponer paquete» ─► validador de pa
 | AR-16 | Ningún proyecto de producción referencia `Simulator`; el motor lo llama solo por HTTP | Prueba de arquitectura |
 | AR-17 | El intérprete recibe únicamente el documento compilado, nunca el diagrama | Prueba de arquitectura sobre la firma |
 | AR-18 | Los cambios de estado de una ejecución pasan solo por el componente de la máquina de estados | Prueba de arquitectura y CA-18a |
+| AR-19 | Ninguna capa abre transacciones fuera de `IUnitOfWork` (ADR-20) | Prueba de arquitectura sobre el uso de EF Core |
 
 Los mensajes de error de estas reglas **dicen cómo corregir** el problema, para que el agente lo resuelva sin ayuda.

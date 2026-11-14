@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.10 |
+| Versión | 0.11 |
 | Fecha límite | 2026-12-02 |
 | Equipo | 2 personas + agentes de programación |
 | Restricción de materia | Sistema web |
@@ -45,7 +45,7 @@
 | **FUT** | Estandarización de paquetes entre negocios. Más oficios. Reportes. Modelos locales para evitar la salida de datos. Comunidad de plugins y conectores. |
 | **Fuera de alcance** | Cobros y facturación. Inventario de refacciones. Aplicación móvil nativa. |
 
-**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80 a RF-82 y RNF-13; (2) consultas de Marketplace, RF-38; (3) estados de entrega de WhatsApp, RF-33; (4) aprobación de plantillas con retraso en el simulador, RF-93; (5) canal SMS. **No se recortan:** las cuatro tareas del enunciado, los paquetes «Reparaciones» y «Citas», los temporizadores anclados (RF-17), los campos propios consultables (RF-51), las respuestas del cliente (RF-36), el canal Correo y el simulador con WhatsApp y Messenger.
+**Escalera de recortes del MVP (en este orden, si el plazo se compromete):** (1) plugin de ejemplo y preparación para open source, RF-80 a RF-82 y RNF-13; (2) consultas de Marketplace, RF-38; (3) estados de entrega de WhatsApp, RF-33; (4) aprobación de plantillas con retraso en el simulador, RF-93; (5) composición de mensajes entrantes desde la interfaz del simulador, RF-94c y RF-94d, conservando la vía de pruebas. **No se recortan:** las cuatro tareas del enunciado, los paquetes «Reparaciones» y «Citas», los temporizadores anclados (RF-17), los campos propios consultables (RF-51), las respuestas del cliente (RF-36), los canales Correo y SMS, y el simulador con WhatsApp y Messenger.
 
 ---
 
@@ -123,10 +123,11 @@
 
 ## 6. Modelo de estados: paquetes de referencia
 
-Esta tabla es el paquete **«Reparaciones»**, entregado como dato (RF-50). El paquete «Citas» está en 6.2. Otro paquete define sus propios estados.
+Esta tabla es el paquete **«Reparaciones»**, entregado como dato (RF-50). El paquete «Citas» está en 6.2. Otro paquete define sus propios estados. Cada estado declara si es terminal, si una persona puede entrar en él y si la acción «Cambiar estado» puede asignarlo; los cambios automáticos se declaran aparte.
 
 **Estados:** Recibido, En diagnóstico, Cotización enviada, Sin respuesta, Aprobada, Rechazada, En reparación, Listo para recoger, Entregado, Cancelado, Abandonado.
 **Terminales:** Entregado, Cancelado, Abandonado.
+**Asignable por la acción «Cambiar estado»:** Sin respuesta (RN-03).
 
 | Origen | Destinos permitidos |
 |---|---|
@@ -156,7 +157,8 @@ Una ejecución es **Completada con fallo** cuando termina pero alguna acción ag
 **Estados:** Solicitada (inicial), Agendada, Confirmada, Atendida, No asistió, Cancelada.
 **Terminales:** Atendida, No asistió, Cancelada.
 **Campos propios:** `fecha_cita` (fecha y hora, obligatorio, campo ancla, filtrable), `servicio` (texto, obligatorio, buscable), `duracion` (minutos, opcional, 30 por defecto).
-**Asignables por el sistema:** Confirmada y Cancelada (por respuesta del cliente, RF-36) y Agendada (al reprogramar una cita Confirmada).
+**Asignables por la acción «Cambiar estado»:** Confirmada y Cancelada (por respuesta del cliente, RF-36).
+**Efecto automático:** Agendada al reprogramar una cita Confirmada (CA-52d); no es asignable por un flujo.
 
 | Origen | Destinos permitidos |
 |---|---|
@@ -169,18 +171,18 @@ Una ejecución es **Completada con fallo** cuando termina pero alguna acción ag
 
 ## 7. Reglas de negocio
 
-Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
+Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27). RN-02 a RN-04 y RN-38 describen el comportamiento observable de los flujos incluidos en los paquetes «Reparaciones» y «Citas»: se implementan exclusivamente como datos en `packs/reparaciones.json` y `packs/citas.json`, y el motor no contiene estados concretos (AR-10).
 
 | ID | Regla |
 |---|---|
-| RN-01 | Un caso tiene exactamente un estado. Solo se permiten las transiciones del paquete activo; en el paquete «Reparaciones», las de la sección 6. En ese paquete, un caso no pasa a En reparación sin haber estado Aprobada. |
+| RN-01 | Un caso tiene exactamente un estado. Solo se permiten las transiciones del paquete activo; en el paquete «Reparaciones», las de la sección 6. |
 | RN-02 | Al entrar a **Cotización enviada** se envía un aviso con el monto. Al entrar a **Listo para recoger** se envía un aviso de recogida. |
 | RN-03 | Si una cotización no recibe respuesta: recordatorio a las **24 h** y a las **72 h**; a las **120 h** el caso pasa a **Sin respuesta** y se crea una entrada en la bandeja del dueño. |
 | RN-04 | Si un equipo en Listo para recoger no se recoge: recordatorios a los **3, 7 y 14 días**; a los **30 días** se crea una solicitud de decisión en la bandeja. El sistema **no** cambia el estado por sí mismo. |
-| RN-05 | Cuando un caso cambia de estado, se cancelan los recordatorios y esperas pendientes del estado anterior. |
+| RN-05 | Cuando un caso cambia de estado, se cancelan los recordatorios y esperas pendientes del estado anterior, incluidas las de la ejecución que originó el cambio, **salvo el paso que ejecuta el cambio**, que termina, se registra como correcto y continúa con el nodo siguiente. |
 | RN-06 | Un mismo aviso (mismo caso, mismo evento, misma etapa de recordatorio) se entrega **una sola vez**, aunque haya reintentos, eventos repetidos o reinicios. |
 | RN-07 | No se envía ningún aviso a un cliente sin consentimiento registrado o sin contacto válido. En ese caso se crea una entrada en la bandeja. Con WhatsApp, el consentimiento (opt-in) debe estar registrado antes del primer mensaje (RN-26). Con Telegram (EXT), el contacto solo es válido cuando el cliente completó la vinculación (RF-32), y **iniciar la conversación cuenta como consentimiento**. Con Messenger, y con una consulta de Marketplace convertida en caso, también cuenta como consentimiento que el cliente inicie la conversación (RN-36). |
-| RN-08 | Los avisos solo se envían dentro de la ventana horaria (**09:00 a 20:00**, hora del negocio). Un aviso que vence fuera de ella se difiere al inicio de la siguiente. |
+| RN-08 | Los avisos solo se envían dentro de la ventana horaria (**09:00 a 20:00**, hora del negocio). Un aviso que vence fuera de ella se difiere al inicio de la siguiente. Las entradas de la bandeja no se difieren: no son avisos salientes y el dueño las ve al abrir la aplicación. |
 | RN-09 | Un aviso fallido se reintenta hasta **3 veces** con esperas de **1 min, 5 min y 30 min**. Agotados los reintentos, el aviso queda "no entregado" y se crea una entrada en la bandeja. |
 | RN-10 | Un flujo es **válido** si: tiene exactamente un evento de inicio; no tiene ciclos; todos sus nodos son alcanzables desde el inicio; toda condición tiene rama por defecto; todo temporizador de duración fija dura más de 0 y como máximo **90 días**, y todo temporizador anclado declara un campo ancla del paquete y un desplazamiento de como máximo **90 días**; solo usa acciones registradas (RF-06) con parámetros válidos. |
 | RN-11 | Cada activación de un flujo crea una versión. Una ejecución conserva la versión con la que empezó, aunque se active una versión nueva. |
@@ -238,7 +240,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-03c** Dado un flujo activo en versión 1 con una ejecución en curso, cuando se modifica y se activa la versión 2, entonces la ejecución en curso termina con la versión 1 y las nuevas ejecuciones usan la 2 (RN-11).
 - **CA-03d** Dado un flujo activo, cuando se desactiva, entonces no se crean ejecuciones nuevas y las que estaban en curso continúan hasta terminar.
 
-**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a un estado, o el cliente responde, RF-36). En EXT se añade el evento «artefacto nuevo» (CA-61e).
+**RF-04 (M, MVP) Disparo por evento.** Un flujo activo se ejecuta cuando ocurre su evento (el caso entra a un estado, o el cliente responde, RF-36). En EXT se añade el evento «artefacto nuevo» (CA-61e). La creación de un caso **no** emite el evento «entra al estado inicial»: solo las transiciones reales lo emiten (RN-30); reaccionar a un caso nuevo queda en EXT como evento «caso creado».
 - **CA-04a** Dado un flujo activo cuyo evento es "el caso entra a Cotización enviada", cuando un caso entra a ese estado, entonces se crea exactamente una ejecución asociada a ese caso y a la versión vigente.
 - **CA-04b** Dado que no hay flujo activo para ese evento, cuando un caso cambia de estado, entonces el cambio se completa y no se crea ejecución.
 
@@ -249,7 +251,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 **RF-06 (M, MVP) Catálogo de acciones registradas.** Una acción solo puede usarse en un flujo si está **registrada** en la instalación (los plugins pueden registrar más, RF-80). Acciones del MVP: **Enviar aviso al cliente**, **Llamar webhook** (RF-16), **Notificar al dueño** (entrada en la bandeja), **Cambiar estado del caso** (solo a los destinos que el paquete permite al sistema) y **Registrar nota** en el caso. En EXT se añaden las acciones de agente de RF-15.
 - **CA-06a** Dado un caso con consentimiento y contacto válido, cuando se ejecuta Enviar aviso, entonces el canal recibe exactamente un mensaje con la plantilla rellena y el aviso queda registrado como "enviado".
 - **CA-06b** Cuando se ejecuta Notificar al dueño, entonces aparece una entrada en la bandeja con el texto y el caso.
-- **CA-06c** Dado un flujo cuya acción Cambiar estado apunta a un estado que el paquete no permite que el sistema asigne (en «Reparaciones», solo Sin respuesta; en «Citas», Confirmada, Cancelada y Agendada), cuando se valida, entonces es inválido (RN-10).
+- **CA-06c** Dado un flujo cuya acción Cambiar estado apunta a un estado que el paquete no permite que el sistema asigne (en «Reparaciones», solo Sin respuesta; en «Citas», Confirmada y Cancelada), cuando se valida, entonces es inválido (RN-10).
 - **CA-06d** Cuando se ejecuta Registrar nota, entonces la nota aparece en la línea de tiempo del caso (RF-26).
 - **CA-06e** Dado un flujo con una acción no registrada, cuando se valida, entonces es inválido y el error nombra la acción (RN-10).
 
@@ -478,7 +480,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 - **CA-90b** Dados un SMS y un HTTP POST, cuando se envían, entonces el simulador los muestra con destino, contenido y referencia.
 - **CA-90c** Dados dos mensajes con la misma referencia, entonces el simulador registra uno solo (CA-11b).
 - **CA-90d** El operador puede filtrar lo recibido por canal y por rango de fechas, y vaciar el registro.
-- **CA-90e** El simulador funciona sin acceso a internet (CA-N08c).
+- **CA-90e** El simulador funciona sin acceso a internet (RNF-08; CA-N08c lo exige para la suite de aceptación).
 - **CA-90f** La interfaz del simulador indica que es una simulación y no un servicio real.
 
 **RF-91 (M, MVP) Inyección de fallos.**
@@ -512,7 +514,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 
 **RF-81 (S, MVP) Plugin de ejemplo documentado.**
 - **CA-81a** Existe un plugin de ejemplo con documentación paso a paso para crear uno propio.
-- **CA-81b [HUMANO]** Una persona ajena al proyecto añade el plugin de ejemplo a una instalación limpia siguiendo la documentación, sin pasos no descritos.
+- **CA-81b** [HUMANO] Una persona ajena al proyecto añade el plugin de ejemplo a una instalación limpia siguiendo la documentación, sin pasos no descritos.
 
 **RF-82 (C, EXT) Canales reales de WhatsApp y Messenger como plugin.**
 - **CA-82a** El adaptador de la API oficial de WhatsApp implementa el mismo contrato que el simulador y se activa por configuración.
@@ -572,7 +574,7 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 
 | ID | Requisito | Criterio de verificación |
 |---|---|---|
-| RNF-01 | **Usabilidad del registro.** Registrar un caso es casi tan rápido como apuntarlo. | **CA-N01a** El registro tiene como máximo 6 campos obligatorios. **CA-N01b [HUMANO]** En prueba con 3 o más personas, mediana de ≤ 30 s en el primer uso y ≤ 15 s desde el tercer registro (metas a calibrar). **CA-N01c** Ninguna pantalla del dueño contiene los términos: flujo, nodo, API, disparador, ejecución (búsqueda automática de texto). |
+| RNF-01 | **Usabilidad del registro.** Registrar un caso es casi tan rápido como apuntarlo. | **CA-N01a** El registro tiene como máximo 6 campos obligatorios. **CA-N01b** [HUMANO] En prueba con 3 o más personas, mediana de ≤ 30 s en el primer uso y ≤ 15 s desde el tercer registro (metas a calibrar). **CA-N01c** Ninguna pantalla del dueño contiene los términos: flujo, nodo, API, disparador, ejecución (búsqueda automática de texto). |
 | RNF-02 | **Compatibilidad.** | **CA-N02a** En 360×640 px no hay desplazamiento horizontal en ninguna pantalla del dueño. **CA-N02b** Funciona en las dos últimas versiones estables de Chrome y Firefox. **CA-N02c** "Registrar caso" es alcanzable en 2 interacciones o menos desde el inicio. |
 | RNF-03 | **Rendimiento.** | **CA-N03a** Validar un flujo de 50 nodos: ≤ 1 s. **CA-N03b** Listar o buscar sobre 1 000 casos: p95 ≤ 2 s. **CA-N03c** Registrar un caso con 10 usuarios simultáneos: p95 ≤ 1 s. |
 | RNF-04 | **Fiabilidad.** Ninguna ejecución se pierde ni duplica avisos. | **CA-N04a** Con 500 ejecuciones simultáneas y un reinicio abrupto a la mitad: 0 ejecuciones perdidas y 0 avisos duplicados. |
@@ -584,8 +586,8 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 | RNF-10 | **Privacidad de salida de datos (EXT).** | **CA-N10a** Ningún dato de una fuente deshabilitada se envía al proveedor de modelo. **CA-N10b** Los contactos se enmascaran antes de enviarse. **CA-N10c** Existe un registro de salida consultable por el dueño con qué se envió (artefacto, campos, destino, hora). |
 | RNF-11 | **Evaluabilidad de los agentes (EXT).** | **CA-N11a** Las pruebas de aceptación que involucran agentes usan respuestas grabadas y son deterministas. **CA-N11b** La evaluación contra el corpus (RH-15) se ejecuta aparte con un modelo real, reporta las métricas de RH-16 y no bloquea la suite (CA-N08c). |
 | RNF-12 | **Retención (EXT).** | **CA-N12a** Artefactos y textos extraídos se eliminan automáticamente a los 30 días salvo que se renueven. **CA-N12b** A petición del dueño, el borrado completo ocurre en 1 min o menos (CA-60c). |
-| RNF-13 | **Preparación para código abierto.** | **CA-N13a** El repositorio contiene archivo de licencia, README con instalación y ejecución, y guía de contribución. **CA-N13b** Una comprobación automática no encuentra secretos (claves o contraseñas) en el repositorio. **CA-N13c [HUMANO]** Las dependencias y sus licencias están listadas y son compatibles con la licencia elegida. |
-| RNF-14 | **Instalación reproducible.** | **CA-N14a [HUMANO]** Desde un repositorio limpio, siguiendo el README, el sistema queda funcionando con datos de demostración y el simulador en 15 min o menos. |
+| RNF-13 | **Preparación para código abierto.** | **CA-N13a** El repositorio contiene archivo de licencia, README con instalación y ejecución, y guía de contribución. **CA-N13b** Una comprobación automática no encuentra secretos (claves o contraseñas) en el repositorio. **CA-N13c** [HUMANO] Las dependencias y sus licencias están listadas y son compatibles con la licencia elegida. |
+| RNF-14 | **Instalación reproducible.** | **CA-N14a** [HUMANO] Desde un repositorio limpio, siguiendo el README, el sistema queda funcionando con datos de demostración y el simulador en 15 min o menos. |
 
 ---
 
@@ -595,8 +597,8 @@ Valores por defecto entre paréntesis; el operador puede modificarlos (RF-27).
 
 | ID | Requisito | Criterio de verificación |
 |---|---|---|
-| RH-01 | **Trazabilidad ejecutable.** Todo CA tiene al menos una prueba automática que lo cita por su ID. | El arnés informa CA con prueba / CA totales (excluye los **[HUMANO]**). Meta MVP: 100 % de los CA de prioridad M. |
-| RH-02 | **Las pruebas de aceptación son el contrato.** Los agentes no las modifican. | Si un cambio toca un archivo protegido de pruebas o de esta especificación sin aprobación humana, el arnés falla. |
+| RH-01 | **Trazabilidad ejecutable.** Todo CA tiene al menos una prueba automática que lo cita por su ID. | El arnés informa CA con prueba / CA totales (excluye los **[HUMANO]**). Meta MVP: 100 % de los CA de RF de prioridad M del alcance comprometido en la propuesta del equipo; los CA de RNF no tienen prioridad y se informan aparte con su propia meta. |
+| RH-02 | **Las pruebas de aceptación son el contrato.** Los agentes no las modifican. | Si un cambio toca un archivo protegido de pruebas, de esta especificación o de la sección 3 de la arquitectura sin aprobación humana, el arnés falla. |
 | RH-03 | **Tarea de agente.** Cada tarea nombra los RF y CA objetivo y se evalúa automáticamente (pasa o falla). | Una tarea sin CA objetivo es rechazada por el arnés. |
 | RH-04 | **Registro por tarea.** Se registra: modelo, tarea, inicio y fin, iteraciones, consumo de uso o costo estimado, resultado e intervenciones humanas. | Cada tarea ejecutada tiene su registro completo. |
 | RH-05 | **Reproducibilidad.** Una tarea puede repetirse desde un estado base identificado del repositorio. | Dos ejecuciones desde el mismo estado base usan la misma entrada y la misma especificación. |

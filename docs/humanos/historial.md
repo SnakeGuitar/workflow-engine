@@ -14,6 +14,7 @@
 | 0.8 | 2026-11-13 | El profesor indicó que la arquitectura del enunciado es una recomendación, no una exigencia: se ajustan D-17, OQ-16, RI-13 y la fila de arquitectura de la sección 1.1. Sin cambios en RF, RN, RNF ni CA. |
 | 0.9 | 2026-11-13 | Reestructuración de la documentación (ver más abajo). Sin cambios en RF, RN, RNF ni CA. |
 | 0.10 | 2026-11-13 | Generalidad para citas, encargos, cotizaciones y talleres, y Facebook. Nuevos: RF-17, RF-36 a RF-38, RF-52, RF-53, RF-94, RN-32 a RN-38, glosario, sección 6.2 (paquete «Citas»), D-19 a D-22, H-41 a H-43, OQ-18, OQ-19, RI-14 a RI-16, N-10. **Cambios de etapa:** el segundo paquete y las respuestas del cliente pasan de EXT a MVP; RF-51 pasa de S a M. **Cambios de significado:** RN-10 (temporizador anclado), RN-07 (Messenger), RF-04, RF-05, RF-31, RF-90, RF-82 y CA-06c. D-02 modificada. |
+| 0.11 | 2026-11-13 | Correcciones del informe de revisión. **Cambios de significado:** RN-05 (el paso que origina el cambio no se cancela), RN-08 (las entradas de bandeja no se difieren), RF-04 (la creación no emite evento de estado). **Sin cambio de significado:** RN-01 (se elimina la coletilla redundante), §6 y §6.2 (esquema de estados y asignabilidad), escalera de recortes (SMS deja de ser recortable; el quinto recorte pasa a RF-94c/d), RH-01 (prioridad de los CA de RNF), RH-02 (protege la sección 3 de arquitectura), CA-06c (Agendada deja de ser asignable por un flujo), CA-90e y formato `[HUMANO]`. |
 
 ## arquitectura.md
 
@@ -27,6 +28,7 @@
 | 0.6 | 2026-11-13 | La arquitectura del enunciado se trata como recomendación, no como exigencia: se ajustan ADR-18, AD-03 y AR-R13. |
 | 0.7 | 2026-11-13 | Reestructuración de la documentación (ver más abajo). |
 | 0.8 | 2026-11-13 | ADR-19 (respuestas entrantes y consultas); ADR-03 (temporizadores anclados), ADR-05 (Messenger), ADR-06, ADR-07, ADR-11 (campos propios consultables) y ADR-15 ajustados; ciclo de vida ampliado; AR-14 cubre consultas. |
+| 0.9 | 2026-11-13 | ADR-18 recuperado desde `humanos/`; ADR-20 (unidad de trabajo) y AR-19; AR-09 y ADR-09 protegen la sección 3; ADR-09 añade el oráculo separado; ADR-07 marca `Discovery` como EXT; ADR-11 declara la asignabilidad de estados. |
 
 ## Reestructuración de la documentación (2026-11-13)
 

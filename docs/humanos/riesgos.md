@@ -34,7 +34,7 @@
 | AR-R7 | El descubrimiento (EXT) podría reclamar tiempo del MVP | Está fuera del MVP (D-14); el núcleo no depende de `Discovery` |
 | AR-R8 | Salidas no deterministas de los agentes | Esquema validado, respuestas grabadas, confirmación humana, evaluación aparte (ADR-12 a ADR-14) |
 | AR-R9 | Salida de datos del negocio y de sus clientes a un tercero | ADR-13: habilitación por fuente, enmascarado, registro de salida; límite declarado con el texto libre |
-| AR-R10 | Los campos propios en JSON limitan las consultas | Solo los campos comunes son buscables en el MVP (ADR-11) |
+| AR-R10 | Los campos propios en JSON limitan las consultas | Solo los declarados `filtrable` o `buscable` son consultables, mediante índice JSON (ADR-11, RF-51) |
 | AR-R11 | El simulador diverge de la plataforma real, sobre todo en WhatsApp | Se declara como modelo (H-40, CA-90f); el adaptador real es EXT y se validaría contra la plataforma |
 | AR-R12 | Los plugins corren sin aislamiento | Se declara como código de confianza (ADR-17); un modelo seguro queda fuera de alcance |
 | AR-R13 | La rúbrica podría valorar la arquitectura recomendada | ADR-18 justifica lo que se adopta y lo que no; alternativa de menor costo documentada |
