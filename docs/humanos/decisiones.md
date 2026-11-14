@@ -37,7 +37,7 @@ Cada ADR vigente está en [../arquitectura.md](../arquitectura.md). Aquí va lo 
 |---|---|---|
 | Esperas que sobreviven a reinicios y no duplican avisos | RF-10, RF-11, RN-06, RNF-04 | Estado de ejecución y temporizadores **persistentes y transaccionales** |
 | Verificar esperas de 120 h sin esperar | RNF-08, CA-07a, CA-25b | El tiempo es una **dependencia inyectable** |
-| Canal de aviso externo con fallos | RF-09, RF-11b, RNF-08b | El canal es un **puerto** con adaptador real y doble de prueba |
+| Canal de aviso externo con fallos | RF-09, CA-11b, CA-N08b | El canal es un **puerto** con adaptador real y doble de prueba |
 | Motor genérico, negocio intercambiable | Propósito, RF-06 | El motor **no conoce** ningún dominio |
 | Adaptarse a cada negocio sin reprogramar | RF-50, RF-51, D-09 | Los procesos son **paquetes declarativos** validados |
 | Aprender del material del negocio (EXT) | RF-60 a RF-63, RF-70, D-10 | Ingesta de solo lectura, extracción por agente y **confirmación humana** |

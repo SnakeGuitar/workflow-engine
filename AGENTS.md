@@ -9,10 +9,11 @@ Motor de flujos web (editor de nodos → DAG → motor asíncrono) con simulador
 
 ## Reglas duras
 - Tu tarea nombra los RF y CA objetivo (RH-03). Sin CA objetivo, pide aclaración.
-- No modifiques `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md` ni la sección 3 de `docs/arquitectura.md` sin aprobación humana (línea `Approved-By:` en el commit).
+- No modifiques `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md`, la sección 3 de `docs/arquitectura.md` ni `harness/scope.json` sin aprobación humana (línea `Approved-By:` en el commit con la persona que aprobó el PR). No escribas tú esa línea.
+- El alcance comprometido está en `harness/scope.json`.
 - Todo test de aceptación lleva el ID de su CA (`[Ac("CA-08a")]`). Un fallo debe citar el CA.
 - El tiempo solo por `TimeProvider` (AR-03). Nunca `DateTime.Now`/`UtcNow`.
-- Dependencias de un solo sentido: `Api → Discovery → Cases → Core`; `Infrastructure → Cases, Discovery, Core`. `Core` no conoce ningún dominio. En el MVP `Discovery` no se crea y `Api` no lo referencia. Los estados salen del paquete en `packs/`, nunca de literales (AR-10).
+- Dependencias de un solo sentido: `Api → Discovery → Cases → Core`; `Api → Infrastructure`; `Infrastructure → Cases, Discovery, Core`. `Api` puede referenciar `Cases` y `Core` directamente. Todos pueden referenciar `Sdk`; `Sdk` no referencia nada. `Core` no conoce ningún dominio. En el MVP `Discovery` no se crea y `Api` no lo referencia. Los estados salen del paquete en `packs/`, nunca de literales (AR-10).
 - Ningún archivo de código supera 400 líneas (AR-07).
 - Contactos y credenciales nunca a logs (AR-05).
 - Alcance: solo `MVP`. Lo marcado `EXT` o `FUT` no se implementa sin pedido explícito.

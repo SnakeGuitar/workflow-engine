@@ -9,13 +9,15 @@
 | Estado del repositorio | 0 líneas de código |
 | Uso previsto | Revisión externa (Claude) antes de aplicar cambios |
 
+> **Correcciones posteriores:** la [auditoría del 2026-11-13](2026-11-13-auditoria.md) revisa este informe y registra los cambios de requisitos v0.12 y arquitectura v0.10. La Parte C ya incorpora el calendario corregido.
+
 > **Naturaleza de este documento.** Es una propuesta de análisis y planificación, no fuente de verdad para implementar. Las correcciones que tocan `docs/requisitos.md` requieren un commit con `Approved-By:` según AR-09 y RH-02. Los IDs existentes no se reutilizan ni cambian de significado.
 
 ---
 
 ## Resumen ejecutivo
 
-1. La especificación es sólida y verificable: 59 RF, 210 CA funcionales + 30 de RNF, 38 RN, 18 AR. El problema no es la calidad, es que **240 CA no caben en 19 días** con 2 personas.
+1. La especificación es sólida y verificable: 59 RF, 210 CA funcionales + 30 de RNF, 38 RN, 18 AR (recuento en requisitos v0.10 y arquitectura v0.8; tras la [auditoría](2026-11-13-auditoria.md): 211 CA y 19 AR). El problema no es la calidad, es que **240 CA no caben en 19 días** con 2 personas.
 2. Hay **8 defectos que bloquean la implementación o invalidan la verificación**, no solo erratas: falta ADR-18, falta el concepto de transacción, dependencias contradictorias, reglas de negocio de paquete en la tabla global y una escalera de recortes que recorta requisitos M.
 3. El arnés propuesto separa **oráculo** (quien escribe pruebas) de **implementación** (quien escribe código), con CI en dos velocidades y trazabilidad CA → prueba como artefacto generado, no manual.
 4. Los hitos son **6 cortes verticales + 1 condicional**; cada uno entrega un sistema desplegable, con demo y tag, nunca una capa a medias.
@@ -38,7 +40,7 @@
 | A5 | `requisitos.md:180` (RN-05) vs `:347` (CA-25b) | A las 120 h **la propia ejecución** cambia el caso a *Sin respuesta*. RN-05 dice que todo cambio de estado cancela esperas pendientes: ¿se cancela a sí misma antes de registrar el paso? | Añadir a RN-05: "La cancelación no alcanza al paso que originó el cambio, que termina y se registra como correcto; sí alcanza al resto de esperas del caso, incluidas las de la misma ejecución." |
 | A6 | `requisitos.md:128-141` y `:159` | **"Asignable por el sistema" solo está definido para «Citas»**, no para «Reparaciones» (§6 no lo declara; solo CA-06c menciona *Sin respuesta*). Además se mezclan tres conceptos: transición permitida a humanos, transición permitida a la acción *Cambiar estado*, y efecto automático (reprogramar → Agendada). | Declarar en el paquete un campo por estado: `humanAllowed`, `systemActionAllowed`, `autoEffect`. Añadir a §6: "Asignables por el sistema: Sin respuesta". En §6.2, `Agendada` debe ser `autoEffect`, **no** `systemActionAllowed`, y CA-06c debe dejar de listarla. |
 | A7 | `requisitos.md:177-179, 213` (RN-02, RN-03, RN-04, RN-38) | Son **reglas de negocio de un paquete** (nombran Cotización enviada, Listo para recoger, Agendada) en la tabla global. Si un agente las implementa en código, viola **AR-10** ("ningún código nombra un estado concreto"). Además duplican lo que ya describen los flujos RF-25 y RF-53. | Mantener las RN como semántica observable, pero añadir: "Se implementan exclusivamente en el flujo incluido del paquete (`packs/reparaciones.json`, `packs/citas.json`); el motor no contiene estados concretos." Y que los CA apunten al flujo, no a una regla codificada. |
-| A8 | `requisitos.md:43, 48, 475-479` + escalera de recortes | La escalera permite recortar **SMS** (punto 5), pero **RF-90 es M** y CA-90b exige SMS. Se recorta un requisito de prioridad M sin cambiar su prioridad. | **Resuelto:** SMS se queda M; el quinto recorte pasa a RF-94c/d. |
+| A8 | `requisitos.md:43, 48, 475-479` + escalera de recortes | La escalera permite recortar **SMS** (punto 5), pero **RF-90 es M** y CA-90b exige SMS. Se recorta un requisito de prioridad M sin cambiar su prioridad. | **Resuelto:** SMS se queda M; el quinto recorte pasa a CA-94c/d (después RF-41, ver la [auditoría](2026-11-13-auditoria.md)). |
 
 ## A.2 Ambigüedades que cambian pruebas
 
@@ -107,12 +109,12 @@ tools/
   Harness/protected.json        # sha256 + reglas de aprobación
   Harness/budget.json           # tokens/costo por modelo y global
 tests/
+  Support/                      # infraestructura de pruebas, no protegida (ADR-09)
+    ApiFactory.cs               # WebApplicationFactory + Postgres
+    FakeClock.cs                # TimeProvider + avance manual
+    FakeChannel.cs              # doble con inyección de fallos
+    CaAssert.cs                 # fallo con ID de CA (RH-06)
   Acceptance/
-    Fixtures/
-      ApiFactory.cs             # WebApplicationFactory + Postgres
-      FakeClock.cs              # TimeProvider + avance manual
-      FakeChannel.cs            # doble con inyección de fallos
-      CaAssert.cs               # fallo con ID de CA (RH-06)
     CA01_FlowsTests.cs          # [Ac("CA-01a")]
     CA02_ValidationTests.cs
     ...
@@ -142,8 +144,8 @@ harness/
 
 ### 2. Freeze
 
-- `protected.json` con sha256 de: `docs/requisitos.md`, `docs/arquitectura.md` (§3), `tests/Acceptance/`, `tests/Fixtures/`.
-- CI compara el hash; si cambió, exige `Approved-By:` en el commit.
+- `protected.json` con sha256 de: `docs/requisitos.md`, `docs/arquitectura.md` (§3), `tests/Acceptance/`, `tests/Fixtures/`, `harness/scope.json`.
+- CI compara el hash; si cambió, exige que el PR tenga la aprobación de un propietario (CODEOWNERS, protección de rama) y que `Approved-By:` nombre a esa persona. Un agente puede escribir la línea, no puede aprobar el PR.
 - Añadir `docs/arquitectura.md` cierra A12.
 
 ### 3. Registro de tareas (`task start|end`)
@@ -157,16 +159,18 @@ harness/
 | Etapa | Disparador | Contenido | Presupuesto |
 |---|---|---|---|
 | `gate` | cada push | build `-warnaserror`, Unit, Architecture, tamaño, gitleaks, freeze, trace | ≤ 3 min |
-| `acceptance` | cada PR | Postgres como *service container* (no Testcontainers por test), aceptación excluyendo `Slow` | ≤ 10 min |
+| `acceptance` | cada PR | Postgres como *service container* (no Testcontainers por test), aceptación excluyendo `Slow`; incluye reinicio simulado para CA-10a/b (se cierra el host y se abre otro sobre la misma base, con el reloj falso) | ≤ 10 min |
 | `ui` | merge a main / manual | Playwright contra `docker compose` | ≤ 5 min |
-| `nightly` | cron | CA-10 (reinicio), escala al 10 % de RNF, Evaluation (EXT), reporte de flakiness | sin límite |
+| `nightly` | cron | CA-10 con `kill -9` real, escala al 10 % de RNF, Evaluation (EXT), reporte de flakiness | sin límite |
 | `release` | tag | build de imagen, `compose up`, smoke CA-N14 | ≤ 15 min |
 
 Nota: Testcontainers por prueba hará imposible el límite de 10 min. Un contenedor por job y limpieza por `TRUNCATE` por clase.
 
 ### 5. Oráculo cruzado (la pieza experimental)
 
-- Carril `oracle`: un modelo escribe las pruebas solo con el texto del CA y las firmas públicas. Nunca ve la implementación.
+- Alcance: los CA comprometidos de `harness/scope.json` (decisión 7, ADR-09); después, mismo agente con revisión por muestreo.
+- El contrato OpenAPI del hito (ADR-08) se fija antes de escribir las pruebas; sin él, el oráculo inventa endpoints.
+- Carril `oracle`: un modelo escribe las pruebas solo con el texto del CA y el contrato OpenAPI. Nunca ve la implementación.
 - Carril `impl`: otro modelo implementa sin ver `tests/Acceptance`.
 - `tests/Acceptance` queda en solo lectura para el carril `impl` (permisos + freeze + CI).
 - Un humano revisa el test antes de congelarlo; a partir de ahí es contrato.
@@ -204,72 +208,78 @@ Cada hito entrega **una versión completa del sistema**: `docker compose up` des
 
 ## C.2 Calendario
 
-| Hito | Fechas | Días | CA acumulados | Demo |
-|---|---|---|---|---|
-| **H0** Esqueleto vertical | 13–14 nov | 2 | ~8 | Ejecutar un flujo y verlo llegar al simulador |
-| **H1** Editor + validación + DAG | 15–17 nov | 3 | ~28 | Dibujar un ciclo, ver el error, corregir y activar |
-| **H2** Motor durable | 18–21 nov | 4 | ~51 | Matar el proceso a mitad de espera y reanudar |
-| **H3** Paquete «Reparaciones» | 22–25 nov | 4 | ~86 | Caso → cotización → recordatorios 24/72/120 h |
-| **H3.5** «Citas» + anclados *(condicional)* | 26 nov | 1 | ~104 | Reprogramar y ver recalcular recordatorios |
-| **H4** Canales y simulador | 26–29 nov | 4 | ~139 | WhatsApp sin consentimiento → bandeja |
-| **H5** Cierre y experimento | 30 nov–2 dic | 3 | ~150 | Instalación limpia + métricas + vídeo |
+Dos carriles humanos (decisión 1): **motor** (backend, persistencia, canales) y **producto** (editor, dominio, vista del dueño, QA). Ningún hito usa algo que entregue un hito posterior.
+
+| Hito | Fechas | Días | Carril motor | Carril producto | Demo | Mide (RH-10) |
+|---|---|---|---|---|---|---|
+| **H0** Esqueleto vertical | 13–15 nov | 3 | Arnés mínimo, compilador, motor sin esperas, webhook | Login, paquete sintético, casos mínimos | Cambiar el estado de un caso de un paquete sintético y ver llegar el POST al simulador | Línea base |
+| **H1** Editor + paquete | 16–18 nov | 3 | Validador completo, activación y versión, disparo por evento | Editor, «Reparaciones» como dato, casos y transiciones | Dibujar un ciclo, ver el error, corregir, activar y dispararlo con un cambio de estado | — |
+| **H2** Motor durable | 19–21 nov | 3 | Temporizadores, reintentos, reanudación, no duplicación, concurrencia | Acciones del catálogo, historial, inyección de fallos | `kill -9` durante una espera; el flujo continúa sin repetir pasos | 25 % |
+| **H3** «Reparaciones» + respuestas | 22–25 nov | 4 | Correo, SMS y WhatsApp con política; respuestas entrantes | Cotización, bandeja, línea de tiempo, campos propios, vista del dueño | Caso → cotización → 24/72/120 h → *Sin respuesta* → bandeja; el cliente responde por WhatsApp | 50 % |
+| **H4** «Citas» + anclados | 26–28 nov | 3 | Temporizadores anclados y recálculo | Paquete y flujo «Citas», agenda del día | Reprogramar una cita Confirmada; respuesta «1» | — |
+| **H5** Resto de la escalera | 29–30 nov | 2 | Messenger, estados de entrega | Marketplace, plantillas, plugin de ejemplo, errores sobre el diagrama | Lo que llegue, en orden inverso a la escalera | 100 % de lo implementado |
+| **H6** Cierre | 1–2 dic | 2 | Instalación limpia, RH-11, RH-18 | README, licencia, métricas, vídeo | Instalación en 15 min | Resultados |
+
+RH-09 (con y sin arnés) se ejecuta durante H1–H4 sobre tareas ya cerradas, no al final.
 
 ## C.3 Fichas
 
-### H0 — Esqueleto vertical (13–14 nov)
+### H0 — Esqueleto vertical (13–15 nov)
 
-- **Versión completa:** login con cookie, un flujo sembrado, botón "Ejecutar", motor que hace `POST` al simulador, historial con un paso.
-- **CA:** CA-30a, CA-01a, CA-16a, CA-12a, CA-90a, CA-90e, CA-N14a.
-- **Incluye arnés mínimo:** CI, Postgres fixture, reloj falso, freeze, trace, AR-01/02/07.
-- **No incluye:** editor, validación, temporizadores, paquetes.
-- **Criterio de muerte:** si el día 14 no hay demo de 3 minutos, se recorta todo lo demás y se dedican 3 días solo a esto.
+- **Versión completa:** login con cookie; un paquete sintético de prueba (datos, como en CA-50e) con un flujo sembrado y compilado; un cambio de estado de un caso dispara la ejecución por evento (RF-04), que hace `POST` al simulador; historial con los pasos. No hay disparo manual: ningún RF lo define.
+- **CA:** CA-30a, CA-14a, CA-16a, CA-90a, CA-12a.
+- **Incluye arnés mínimo:** CI (`gate`), Postgres por job, reloj falso, `tests/Support/`, freeze con CODEOWNERS, trace contra `harness/scope.json`, registro de tareas, AR-01/02/07/19.
+- **No incluye:** editor, validación completa, esperas.
+- **Criterio de muerte (15 nov, carril motor):** sin demo, las dos personas siguen en H0 y se aplica el recorte (1); el día perdido sale de H5.
 
-### H1 — Editor + validación + DAG (15–17 nov)
+### H1 — Editor + paquete «Reparaciones» mínimo (16–18 nov)
 
-- **Versión completa:** el operador dibuja, guarda, valida (todos los errores), activa y ve la versión; el DAG compilado se persiste.
-- **CA:** CA-01a/b, CA-02a–g, CA-03a/b, CA-14a–e, CA-40a–e, CA-41a.
-- **Demo:** ciclo A→B→A marcado sobre los nodos; corregir; activar v1; compilar dos veces y comparar bytes.
-- **No incluye:** ejecución real del flujo dibujado.
+- **Versión completa:** el operador dibuja, valida (todos los errores), activa y versiona; un cambio de estado de un caso de «Reparaciones» dispara el flujo dibujado.
+- **CA:** CA-01a/b, CA-02a–i, CA-03a–d, CA-14b–e, CA-40a–e, CA-41a; CA-50a/b/d, CA-20a–d, CA-21a–c, CA-04a/b.
+- **Demo:** ciclo A→B→A marcado sobre los nodos; corregir; activar v1; cambiar el estado de un caso y ver la ejecución; compilar dos veces y comparar bytes.
+- **Criterio (18 nov, carril producto):** CA comprometidos de H1 en verde; si no, recortes (1) y (2).
 
-### H2 — Motor durable (18–21 nov)
+### H2 — Motor durable (19–21 nov)
 
-- **Versión completa:** ejecuciones que sobreviven reinicio, temporizadores, reintentos con esperas, cancelación por estado, sin duplicados.
-- **CA:** CA-04a/b, CA-05a/b, CA-07a/b/c, CA-08a/b, CA-09a/b, CA-10a/b/c, CA-11a/b, CA-12a/b/c, CA-13a/b, CA-18a/b/c.
+- **Versión completa:** ejecuciones que sobreviven reinicio, temporizadores, reintentos con esperas, cancelación por estado (RN-05), sin duplicados.
+- **CA:** CA-05a/b, CA-06a/b/d/e, CA-07a–c, CA-08a/b, CA-09a/b, CA-10a–c, CA-11a/b, CA-12b/c, CA-13a/b, CA-16b–f, CA-18a–c, CA-91a–c.
 - **Demo:** `kill -9` durante una espera; reiniciar; el flujo continúa sin repetir pasos; canal que falla dos veces y acierta a la tercera.
-- **Criterio de muerte:** si CA-10a/b no están verdes, se congela el alcance aquí y se abandonan Citas y Marketplace.
+- **Criterio de muerte (21 nov, carril motor):** CA-10a/b en verde. Si no: recortes (1)–(5) inmediatos, las dos personas al motor y plan B técnico (reclamo por sondeo de la tabla de temporizadores, sin concesión, con una sola instancia, ADR-01). Si el 23 sigue en rojo, se pide el cambio aprobado de requisitos para los recortes (6) y (7). No se tocan ADR-03, RN-06, CA-10c, CA-11 ni el arnés.
 
-### H3 — «Reparaciones» (22–25 nov)
+### H3 — «Reparaciones» completo + respuestas (22–25 nov)
 
-- **Versión completa:** registrar caso, transiciones, cotización, flujo de seguimiento instalado, bandeja, línea de tiempo, vista del dueño.
-- **CA:** RF-20 a RF-29, RF-31 (solo correo), RF-50, RF-51 (subconjunto), CA-30b.
-- **Demo:** crear caso → En diagnóstico → Cotización 1500 → aviso → 24 h y 72 h → 120 h a *Sin respuesta* → bandeja.
+- **Versión completa:** registrar caso, transiciones, cotización, flujo de seguimiento instalado, bandeja, línea de tiempo, vista del dueño, avisos por Correo, SMS y WhatsApp, respuestas del cliente.
+- **CA:** RF-22 a RF-29, RF-31 (Correo, SMS y WhatsApp), RF-35, RF-36, RF-51, RF-90, RF-92, CA-94c/d, CA-06c, CA-30b/c.
+- **Demo:** crear caso → En diagnóstico → Cotización 1500 → aviso → 24 h y 72 h → 120 h a *Sin respuesta* → bandeja; el cliente responde por WhatsApp y aparece en la línea de tiempo.
+- **Criterio (25 nov, ambos):** si la demo falla, se pide ya el recorte (6).
 
-### H3.5 — «Citas» + temporizadores anclados (26 nov, condicional)
+### H4 — «Citas» + temporizadores anclados (26–28 nov)
 
-- **Solo si H3 cerró el 24.** Demuestra genericidad: mismo motor, otro paquete.
-- **CA:** RF-17 completo, RF-52, RF-53.
-- **Demo:** cambiar `fecha_cita` y ver que los temporizadores se recalculan; respuesta "1" → Confirmada.
+- **No es condicional:** «Citas» solo sale por el recorte (7), que exige un cambio aprobado de requisitos.
+- **CA:** RF-17, RF-52, RF-53.
+- **Demo:** cambiar `fecha_cita` de una cita Confirmada: vuelve a Agendada, se pide confirmar y los recordatorios se calculan para la nueva fecha; respuesta «1» → Confirmada.
+- **Criterio (28 nov, carril producto):** si no está, recorte (7).
 
-### H4 — Canales y simulador (26–29 nov)
+### H5 — Resto de la escalera (29–30 nov)
 
-- **Versión completa:** WhatsApp/Messenger simulados con sus políticas, respuestas entrantes, estados de entrega, inyección de fallos, aprobación de plantillas.
-- **CA:** RF-33, 35, 36, 37, 90–94; RF-38 solo si sobra.
-- **Demo:** sin opt-in → bandeja; plantilla en borrador → pendiente; cliente responde "1" → estado; fallo inyectado → 3 reintentos.
-- **Recorte:** Marketplace (RF-38) primero, luego estados de entrega (RF-33).
+- En orden inverso a la escalera: RF-37 y CA-94a/b, RF-41, RF-93, RF-33, RF-38, RF-80/81 y RNF-13. Lo que no esté el 30 queda recortado.
 
-### H5 — Cierre (30 nov–2 dic)
+### H6 — Cierre (1–2 dic)
 
-- **Versión completa:** plugin de ejemplo registrado sin tocar el motor, README/licencia, instalación en 15 min, métricas M1–M6, dos cambios de requisito controlados, vídeo.
-- **CA:** RF-80/81, RNF-13/14, RH-04 a RH-11, RH-18.
+- **Versión completa:** instalación en 15 min (CA-N14a), dos cambios de requisito controlados (RH-11), plugin como cambio controlado si existe (RH-18), métricas M1–M6, vídeo.
 
 ## C.4 Puntos de control
 
-| Fecha | Medición | Decisión |
-|---|---|---|
-| 17 nov | CA cerrados / días | Si < 4 CA/día, se elimina H3.5 y se reduce H4 a correo + webhook |
-| 21 nov | CA-10a/b en verde | Si no, se congela el alcance en H3 |
-| 25 nov | demo de H3 | Si falla, H4 se limita a WhatsApp simulado sin Marketplace |
-| 27 nov | congelación de features | Solo se aceptan correcciones, no alcance nuevo |
+| Fecha | Responsable | Medición | Decisión |
+|---|---|---|---|
+| 15 nov | Carril motor | Demo de H0 | Sin demo: recorte (1) y se sigue en H0 |
+| 18 nov | Carril producto | CA comprometidos de H1 en verde (`harness/scope.json`) | Si no: recortes (1)–(2) |
+| 21 nov | Carril motor | CA-10a/b en verde | Si no: recortes (1)–(5) y plan B técnico; el 23, cambio aprobado para (6)–(7) |
+| 25 nov | Ambos | Demo de H3 | Si falla: recorte (6) |
+| 28 nov | Carril producto | Demo de H4 | Si falla: recorte (7) |
+| 30 nov | Ambos | Congelación de features | Solo correcciones |
+
+La medición no es «CA por día», que un agente puede inflar: es CA comprometidos y CA del hito en curso en verde. Los recortes siguen siempre la escalera de la sección 2 de requisitos.
 
 ## C.5 Qué no entra en ningún hito
 
@@ -282,11 +292,11 @@ Cada hito entrega **una versión completa del sistema**: `docker compose up` des
 | # | Decisión | Resolución |
 |---|---|---|
 | 1 | Tamaño del equipo | **2 personas + agentes** (confirma `requisitos.md:7`). Dos carriles humanos: motor/backend y frontend/dominio/QA. |
-| 2 | SMS | Se queda **M**, implementado como alias del canal HTTP. La quinta bala de recorte pasa a RF-94c/d. |
+| 2 | SMS | Se queda **M**, implementado como alias del canal HTTP. La quinta bala de recorte pasa a CA-94c/d (después RF-41, ver la [auditoría](2026-11-13-auditoria.md)). |
 | 3 | Evento al crear | **No se emite.** Documentado en RF-04; «caso creado» queda en EXT. |
 | 4 | Bandeja y horario | **No se difiere.** Aclarado en RN-08: la ventana aplica solo a avisos salientes. |
 | 5 | Proteger arquitectura | **Sí, la sección 3**, vía AR-09, RH-02 y ADR-09. Mecanismo: `harness/ar-contract.json` (pendiente de crear). |
-| 6 | MVP-0 | **12 CA comprometidos + 3 de soporte**; 30 como objetivo, con criterio de muerte el 21 de noviembre. |
+| 6 | MVP-0 | **12 CA comprometidos + 3 de soporte**; 30 como objetivo, con criterio de muerte el 21 de noviembre. Ampliado a 16 comprometidos tras la auditoría. |
 | 7 | Oráculo | **Separación parcial**: oráculo independiente en el primer corte (ADR-09); después, mismo agente con revisión por muestreo. |
 
 ## Registro de aplicación
@@ -294,7 +304,7 @@ Cada hito entrega **una versión completa del sistema**: `docker compose up` des
 ### `requisitos.md` → v0.11
 
 - A5: RN-05 exime al paso que origina el cambio.
-- A8: la escalera de recortes ya no recorta SMS; el quinto recorte es RF-94c/d. SMS entra en la lista de no recortables.
+- A8: la escalera de recortes ya no recorta SMS; el quinto recorte es CA-94c/d (después RF-41, ver la [auditoría](2026-11-13-auditoria.md)). SMS entra en la lista de no recortables.
 - A9: RF-04 declara que la creación no emite evento de estado.
 - A11: RN-08 declara que las entradas de bandeja no se difieren.
 - A6: §6 y §6.2 separan «asignable por la acción Cambiar estado» de «efecto automático».
@@ -323,19 +333,22 @@ Cada hito entrega **una versión completa del sistema**: `docker compose up` des
 
 ## MVP-0
 
-**Comprometidos (12):** CA-40a, CA-40d, CA-02a, CA-02c, CA-02g, CA-14a, CA-14b, CA-14d, CA-07a, CA-09a, CA-16a, CA-16b.
+**Comprometidos (16):** CA-40a, CA-40d, CA-40e, CA-02a, CA-02c, CA-02g, CA-14a, CA-14b, CA-14d, CA-03b, CA-04a, CA-07a, CA-09a, CA-10b, CA-16a, CA-16b. Los cuatro últimos añadidos (CA-03b, CA-40e, CA-04a, CA-10b) salen de la auditoría: unen editor, compilador y motor.
 
 **Soporte (3):** CA-10a (reanudación), CA-12a (historial), CA-90a (simulador recibe).
+
+El MVP-0 vive en `harness/scope.json` (protegido).
 
 Cubre las cuatro tareas del enunciado: editor, validador/compilador, motor con esperas y reintentos, y webhook saliente con simulador. CA-10a es el diferenciador: sin durabilidad no hay motor, solo un diagrama que se ejecuta.
 
 ## Pendiente
 
-1. Commit con `Approved-By:` — `docs/requisitos.md` y la sección 3 de `docs/arquitectura.md` están protegidos.
+1. Commit con `Approved-By:` — `docs/requisitos.md`, la sección 3 de `docs/arquitectura.md` y `harness/scope.json` están protegidos.
 2. `harness/ar-contract.json`: se crea al montar el arnés (decisión 5).
-3. El MVP-0 no es un artefacto de requisitos; vive en este informe y en la propuesta.
+3. El MVP-0 vive en `harness/scope.json`; RH-01 y AR-08 lo usan como meta.
 4. A16 (2 vs 3 personas) queda resuelto: 2 personas + agentes.
 
 ---
 
 **Nota operativa:** los cambios en `docs/requisitos.md` requieren un commit con `Approved-By:` según la regla propia del proyecto. Los de `arquitectura.md`, `AGENTS.md` y `humanos/*` no, salvo los de la sección 3 de arquitectura, que quedan protegidos a partir de esta versión.
+

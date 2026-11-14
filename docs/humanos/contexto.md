@@ -79,6 +79,8 @@
 
 ## Orden de construcción y calendario (estimación)
 
+> **Sustituido** por el calendario de hitos de [informes/2026-11-13-arnes-e-hitos.md](informes/2026-11-13-arnes-e-hitos.md), sección C.2. Esta tabla se conserva como la estimación inicial.
+
 Es una estimación mía, no un compromiso; la validación real llega al primer hito.
 
 | Fechas | Hito | Mide (RH-10) |

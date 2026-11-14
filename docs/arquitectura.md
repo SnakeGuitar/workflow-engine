@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.9 |
-| Entrada | [requisitos.md](requisitos.md) v0.11 |
+| Versión | 0.10 |
+| Entrada | [requisitos.md](requisitos.md) v0.12 |
 | Razones, alternativas y riesgos | [humanos/](humanos/) (no necesario para implementar) |
 
 Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las versiones de paquetes son las que conozco: **verificarlas al instalar**. Las reglas de la sección 3 son ejecutables y alimentan RH-07.
@@ -56,15 +56,17 @@ Cada `ADR-xx` fija una decisión vigente y los requisitos que la motivan. Las ve
   - Un **intérprete** ejecuta una versión nodo a nodo. Los tipos de nodo y las acciones del catálogo se registran en un **registro único y cerrado** (RF-06): un flujo con una acción desconocida no se valida.
   - El nodo **Temporizador** tiene dos modos: duración fija, o anclado (campo ancla del paquete, desplazamiento y sentido). El validador comprueba el campo contra el paquete activo (CA-17e).
   - El nodo **Evento** admite «el caso entra a un estado» y «el cliente responde». La Condición puede leer el texto de la respuesta, normalizado (RN-34).
-  - La cancelación por cambio de estado (RN-05) se modela con el parámetro `cancelarAlSalirDelEstado` del nodo Evento, activo por defecto.
+  - Un nodo que no es Condición tiene como máximo una salida (RN-10), así que una ejecución tiene un único nodo actual (ADR-03).
+  - La cancelación por cambio de estado (RN-05) se modela con el parámetro `cancelarAlSalirDelEstado` del nodo Evento, activo por defecto; en falso, la ejecución solo se cancela cuando el caso llega a un estado terminal. La ejecución cuyo paso origina el cambio no se cancela por él y continúa con el nodo siguiente.
+  - Al crear una ejecución de un flujo para un caso, la que siga en curso del mismo flujo y caso se cancela con el motivo «reemplazada» (RN-05).
 
 ### ADR-07 Capas rígidas; los dominios son paquetes de datos
 - **Decisión:** módulos con dependencias de un solo sentido (más `Sdk` y `Simulator`, ADR-17 y ADR-15):
-  - `Core`: motor (flujos, validación, ejecución), contrato de paquete, contrato de paso agente y puertos (canal, proveedor de modelo, reloj). **No conoce ningún dominio.**
+  - `Core`: motor (flujos, validación, ejecución), contrato de paquete, contrato de paso agente y puertos (proveedor de modelo, reloj y unidad de trabajo, ADR-20); los contratos de canal los toma de `Sdk` (ADR-05). **No conoce ningún dominio.**
   - `Cases`: casos con campos comunes y propios, aplicación de los paquetes, bandeja, línea de tiempo, mensajes entrantes, consultas y los manejadores de las acciones del catálogo. Depende solo de `Core`.
   - `Discovery` (EXT): fuentes, ingesta, extracción, propuestas y su confirmación. Depende de `Core` y `Cases`.
   - `Infrastructure`: PostgreSQL, procesador de temporizadores, adaptadores de canal, lectores de fuentes y adaptador del proveedor de modelo. Implementa los puertos de `Core` y usa los tipos de `Cases` y `Discovery` para persistirlos.
-  - `Api`: HTTP, autenticación y composición.
+  - `Api`: HTTP, autenticación y composición. Referencia `Cases`, `Infrastructure` y `Core` (y `Discovery` en EXT).
 - **Dependencias permitidas:**
 
 ```
@@ -96,7 +98,10 @@ tests/
   Unit/
   Architecture/                   reglas de la sección 3
   Fixtures/                       corpus sintético y respuestas grabadas (protegidos)
+  Support/                        infraestructura de pruebas: fábrica, reloj falso, aserciones (no protegida)
   Evaluation/                     evaluación contra el corpus con modelo real (aparte)
+harness/
+  scope.json                      CA comprometidos (protegido)
 docs/
   requisitos.md  arquitectura.md
   humanos/                        contexto, decisiones, riesgos e historial (no necesarios para implementar)
@@ -112,8 +117,10 @@ AGENTS.md                         índice corto que remite a docs/
 - **Decisión:**
   - **Pruebas de aceptación** contra la aplicación completa en memoria (`WebApplicationFactory`), con PostgreSQL real de prueba (Testcontainers o una base dedicada), reloj falso y doble de canal.
   - Cada prueba lleva un atributo con su ID (por ejemplo `[Ac("CA-08a")]`). Un script cruza esos IDs con `docs/requisitos.md` y calcula la cobertura de CA (RH-01).
-  - **Archivos protegidos (RH-02):** `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md` y la sección 3 de este documento. Un chequeo en CI falla si un cambio los toca sin un marcador de aprobación humana en el commit (por ejemplo la línea `Approved-By:`).
-  - **Oráculo separado:** las pruebas de aceptación del primer corte se escriben sin acceso a la implementación y una persona las revisa antes de congelarlas; el registro de tareas anota la condición (RH-04).
+  - **Archivos protegidos (RH-02):** `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md`, la sección 3 de este documento y `harness/scope.json`. Un chequeo en CI falla si un cambio los toca sin la aprobación de una persona revisora: la rama principal exige revisión de los propietarios (CODEOWNERS) y la línea `Approved-By:` del commit debe nombrar a quien aprobó el PR.
+  - **Alcance comprometido:** `harness/scope.json` lista los CA comprometidos; la trazabilidad (RH-01, AR-08) se mide contra él.
+  - **Oráculo separado:** las pruebas de aceptación de los CA comprometidos se escriben sin acceso a la implementación, a partir del texto del CA y del contrato OpenAPI (ADR-08), y una persona las revisa antes de congelarlas; el registro de tareas anota la condición (RH-04).
+  - La infraestructura de pruebas (fábrica de la aplicación, reloj falso, aserciones con ID de CA) vive en `tests/Support/` y no está protegida.
   - Los mensajes de fallo incluyen el ID del CA y qué se esperaba (RH-06).
   - Las pruebas de la interfaz (CA-40, CA-N02) usan un navegador automatizado (Playwright).
   - Las pruebas que involucran agentes usan **respuestas grabadas** de `tests/Fixtures/` (RH-17, CA-N11a); la evaluación con modelo real vive en `tests/Evaluation/` y no bloquea la suite (CA-N11b).
@@ -126,9 +133,9 @@ AGENTS.md                         índice corto que remite a docs/
 ### ADR-11 Paquetes de proceso declarativos (plugins de datos)
 - **Motivo:** RF-50 a RF-53, RN-21, RN-22, RN-38.
 - **Decisión:**
-  - Un **paquete** es un documento versionado, inmutable por versión: estados (inicial y terminales, y por cada uno si una persona puede entrar en él y si la acción «Cambiar estado» puede asignarlo), transiciones, campos propios (tipo, obligatoriedad y si son filtrables, buscables o campo ancla), plantillas de aviso y flujos incluidos. El de «Reparaciones» vive en `packs/` como dato.
+  - Un **paquete** es un documento versionado, inmutable por versión: estados (inicial y terminales, y por cada uno si una persona puede asignarlo y si la acción «Cambiar estado» puede asignarlo), transiciones, efectos automáticos (operación que los provoca, origen y destino; por ejemplo, cambio del campo ancla en Confirmada → Agendada), campos propios (tipo, obligatoriedad y si son filtrables, buscables o campo ancla), plantillas de aviso y flujos incluidos. El de «Reparaciones» vive en `packs/` como dato.
   - Un **validador de paquetes** puro (RN-21) reutiliza el validador de flujos (RN-10) para los flujos incluidos.
-  - `Cases` aplica la tabla de transiciones y valida los campos propios. Ningún código nombra un estado concreto (AR-10).
+  - `Cases` aplica la tabla de transiciones y los efectos automáticos leyéndolos del paquete, y valida los campos propios. Ningún código nombra un estado concreto (AR-10).
   - Un caso se guarda con **columnas comunes** (folio, nombre, contacto, canal, estado, fecha, versión de paquete) y un **documento JSON** para los campos propios, validado contra el esquema del paquete.
   - Los **plugins de código** (acciones, canales, lectores) se describen en ADR-17.
   - La **suite de conformidad** (CA-50d, CA-50e) ejecuta las pruebas de transiciones sobre cualquier paquete.
@@ -198,7 +205,9 @@ AGENTS.md                         índice corto que remite a docs/
 
 ### ADR-20 Unidad de trabajo y transacciones
 - **Motivo:** ADR-03 exige atomicidad por paso y RN-33 exige recalcular temporizadores en la misma transacción desde `Cases`.
-- **Decisión:** `Core` define `IUnitOfWork` con `ExecuteInTransactionAsync`. `Cases` y el motor componen operaciones dentro de un ámbito; `Infrastructure` lo implementa con EF Core. Ninguna capa abre transacciones por su cuenta.
+- **Decisión:** `Core` define `IUnitOfWork` con `ExecuteInTransactionAsync`. `Cases`, el motor y `Api` componen operaciones dentro de un ámbito; `Infrastructure` lo implementa con EF Core. Ninguna capa abre transacciones por su cuenta.
+  - **Anidamiento:** un ámbito abierto dentro de otro se une al exterior; solo el exterior confirma o revierte. Así, el paso del motor que ejecuta «Cambiar estado» confirma en una sola transacción el paso, el cambio de estado, las cancelaciones (RN-05) y el recálculo de temporizadores (RN-33).
+  - Solo la implementación de `IUnitOfWork` llama a `SaveChanges` o abre transacciones; el reclamo con `FOR UPDATE SKIP LOCKED` (ADR-03) también pasa por ella.
 - **Regla:** AR-19.
 
 ---
@@ -217,7 +226,9 @@ Ejecución creada (versión vigente del flujo)
 │                                            · o termina (completada, con fallo, cancelada)
 └─────────── vence temporizador ◄────────────┘
 
-Cambio de estado del caso ⇒ cancela ejecuciones con cancelarAlSalirDelEstado (RN-05)
+Cambio de estado del caso ⇒ cancela ejecuciones con cancelarAlSalirDelEstado, salvo la que lo originó (RN-05)
+Estado terminal ⇒ cancela todas las ejecuciones en curso del caso (RN-05)
+Nueva ejecución del mismo flujo y caso ⇒ la anterior se cancela como «reemplazada» (RN-05)
 Aviso pendiente ⇒ se entrega con referencia única; fallo ⇒ reintento con espera (RN-09)
 Temporizador anclado ⇒ vence en campo ancla ± desplazamiento; si el campo cambia, se recalcula (RN-33)
 Mensaje entrante ⇒ dedup por id externo ⇒ caso ⇒ evento «el cliente responde» (ADR-19)
@@ -257,8 +268,8 @@ Casos confirmados ─► paso agente «Proponer paquete» ─► validador de pa
 | AR-05 | Los tipos de datos personales y credenciales no se pasan a registros técnicos | Prueba de arquitectura sobre firmas + analizador |
 | AR-06 | Toda acción del catálogo está en el registro único y tiene al menos un CA que la ejercita | Prueba sobre el registro |
 | AR-07 | Ningún archivo de código supera 400 líneas | Comprobación en CI |
-| AR-08 | Todo CA de prioridad M tiene una prueba etiquetada | Script de trazabilidad (RH-01) |
-| AR-09 | `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md` y la sección 3 de este documento no cambian sin aprobación humana | Chequeo en CI (RH-02, RH-15, RH-17) |
+| AR-08 | Todo CA comprometido en `harness/scope.json` tiene una prueba etiquetada; los demás CA de prioridad M se informan como pendientes | Script de trazabilidad (RH-01) |
+| AR-09 | `tests/Acceptance/`, `tests/Fixtures/`, `docs/requisitos.md`, la sección 3 de este documento y `harness/scope.json` no cambian sin la aprobación de una persona revisora | Chequeo en CI contra el aprobador del PR (RH-02, RH-15, RH-17) |
 | AR-10 | Los estados y transiciones salen solo del paquete activo: ningún código de `Cases`, `Discovery` ni `Api` nombra un estado concreto de un paquete | Prueba de arquitectura y búsqueda de literales; los paquetes viven en `packs/` |
 | AR-11 | Los lectores de fuentes no tienen operaciones de escritura y la ingesta deja los archivos con la misma huella | Prueba de arquitectura y CA-61a |
 | AR-12 | Solo `Infrastructure` referencia clientes de modelos, y el adaptador real exige el filtro de enmascarado | Prueba de arquitectura y prueba de construcción |
@@ -268,6 +279,6 @@ Casos confirmados ─► paso agente «Proponer paquete» ─► validador de pa
 | AR-16 | Ningún proyecto de producción referencia `Simulator`; el motor lo llama solo por HTTP | Prueba de arquitectura |
 | AR-17 | El intérprete recibe únicamente el documento compilado, nunca el diagrama | Prueba de arquitectura sobre la firma |
 | AR-18 | Los cambios de estado de una ejecución pasan solo por el componente de la máquina de estados | Prueba de arquitectura y CA-18a |
-| AR-19 | Ninguna capa abre transacciones fuera de `IUnitOfWork` (ADR-20) | Prueba de arquitectura sobre el uso de EF Core |
+| AR-19 | Ninguna capa abre transacciones fuera de `IUnitOfWork` (ADR-20) | Prueba de arquitectura: solo la implementación de `IUnitOfWork` llama a `SaveChanges`, `BeginTransaction` o `Database.ExecuteSql*` |
 
 Los mensajes de error de estas reglas **dicen cómo corregir** el problema, para que el agente lo resuelva sin ayuda.

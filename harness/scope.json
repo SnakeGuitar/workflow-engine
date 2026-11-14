@@ -1,0 +1,15 @@
+{
+  "spec": "docs/requisitos.md 0.12",
+  "descripcion": "Alcance comprometido (RH-01, AR-08). Protegido (RH-02, AR-09): un cambio exige la aprobación de una persona revisora.",
+  "comprometidos": [
+    "CA-40a", "CA-40d", "CA-40e",
+    "CA-02a", "CA-02c", "CA-02g",
+    "CA-14a", "CA-14b", "CA-14d",
+    "CA-03b", "CA-04a",
+    "CA-07a", "CA-09a", "CA-10b",
+    "CA-16a", "CA-16b"
+  ],
+  "soporte": [
+    "CA-10a", "CA-12a", "CA-90a"
+  ]
+}
