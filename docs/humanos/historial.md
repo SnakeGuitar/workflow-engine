@@ -4,39 +4,43 @@
 
 | Versión | Fecha | Cambio |
 |---|---|---|
-| 0.1 | 2026-11-12 | Borrador provisional inicial. Sin validación con usuarios. |
-| 0.2 | 2026-11-12 | Confirmadas las decisiones D-01 a D-05. Sin cambios en RF, RN, RNF ni CA. |
-| 0.3 | 2026-11-12 | RH-07 enlaza con las reglas AR-01 a AR-09 de la arquitectura. Añadida H-25. Sin cambios en RF, RN, RNF ni CA. |
-| 0.4 | 2026-11-13 | Canales Correo y Telegram. Nuevos RF-31 y RF-32 (CA-31a a CA-32c), glosario, D-08, H-28, RI-07. RN-07 ampliada para Telegram (iniciar la conversación cuenta como consentimiento). Nota bajo RF-20: el contacto se valida según el canal; el significado de los CA-20a a CA-20d no cambia. |
-| 0.5 | 2026-11-13 | Confirmada la decisión D-08. Sin cambios en RF, RN, RNF ni CA. |
-| 0.6 | 2026-11-13 | Visión de adaptación a cada negocio: escenario de tres locales, etapa MVP-V, paquetes de proceso (RF-50, RF-51), pasos de agente (RF-15), fuentes, extracción y propuestas (RF-60 a RF-63, RF-70 a RF-72), RN-15 a RN-23, RNF-10 a RNF-12, RH-15 a RH-17, D-09 a D-13, H-29 a H-33. **Cambios de significado:** RN-01 y CA-21a se generalizan del paquete «Reparaciones» a «el paquete activo» (el comportamiento de «Reparaciones» no cambia). D-07 modificada. Sección 6 pasa a ser el paquete de referencia. |
-| 0.7 | 2026-11-13 | Alineación con el enunciado del profesor y con la visión abierta y extensible. Nuevos: sección 1.1, RF-14 (compilación a DAG), RF-16 (webhook saliente), RF-18 (estados de la ejecución), RF-33 a RF-35 (WhatsApp), RF-80 a RF-82 (extensibilidad), RF-90 a RF-93 (simulador), RN-24 a RN-31, RNF-13, RNF-14, RH-18, D-14 a D-18, OQ-14 a OQ-17, H-34 a H-40, RI-12, RI-13. **Cambios de etapa:** el descubrimiento y los pasos de agente pasan a EXT (la etapa MVP-V desaparece); Telegram pasa a EXT; RF-51 pasa a S. **Cambios de significado:** RF-06 (catálogo de acciones registradas), CA-06c, RF-31, CA-31b, CA-31c y RN-07 se generalizan para admitir varios canales y paquetes. D-05, D-07, D-08 y D-12 modificadas. |
-| 0.8 | 2026-11-13 | El profesor indicó que la arquitectura del enunciado es una recomendación, no una exigencia: se ajustan D-17, OQ-16, RI-13 y la fila de arquitectura de la sección 1.1. Sin cambios en RF, RN, RNF ni CA. |
-| 0.9 | 2026-11-13 | Reestructuración de la documentación (ver más abajo). Sin cambios en RF, RN, RNF ni CA. |
-| 0.10 | 2026-11-13 | Generalidad para citas, encargos, cotizaciones y talleres, y Facebook. Nuevos: RF-17, RF-36 a RF-38, RF-52, RF-53, RF-94, RN-32 a RN-38, glosario, sección 6.2 (paquete «Citas»), D-19 a D-22, H-41 a H-43, OQ-18, OQ-19, RI-14 a RI-16, N-10. **Cambios de etapa:** el segundo paquete y las respuestas del cliente pasan de EXT a MVP; RF-51 pasa de S a M. **Cambios de significado:** RN-10 (temporizador anclado), RN-07 (Messenger), RF-04, RF-05, RF-31, RF-90, RF-82 y CA-06c. D-02 modificada. |
-| 0.11 | 2026-11-13 | Correcciones del informe de revisión. **Cambios de significado:** RN-05 (el paso que origina el cambio no se cancela), RN-08 (las entradas de bandeja no se difieren), RF-04 (la creación no emite evento de estado), CA-06c (en «Citas», Agendada deja de ser asignable por un flujo), RH-01 (la meta pasa a ser el alcance comprometido), RH-02 (protege la sección 3 de arquitectura). **Sin cambio de significado:** RN-01 (se elimina la coletilla redundante), §6 y §6.2 (esquema de estados y asignabilidad), escalera de recortes (SMS deja de ser recortable; el quinto recorte pasa a CA-94c y CA-94d), CA-90e y formato `[HUMANO]`. |
-| 0.12 | 2026-11-13 | Correcciones de la auditoría del 2026-11-13 (ver [informes/2026-11-13-auditoria.md](informes/2026-11-13-auditoria.md)). Nuevo: CA-02i. **Cambios de significado:** RN-05 (esperas programadas antes del cambio, incluidos avisos diferidos o en reintento; excepción para flujos que sobreviven al cambio de estado; una ejecución en curso por flujo y caso), RN-10 (un nodo que no es Condición tiene como máximo una salida), RN-28 (estado «cancelado»), RN-38 (el flujo sobrevive al cambio de estado), RF-04 (un caso se crea en el estado inicial; los efectos automáticos emiten evento), RH-01 y RH-02 (`harness/scope.json`), escalera de recortes (el quinto recorte pasa a RF-41; los recortes 6 y 7 exigen rebajar la prioridad; «Citas», RF-17 y Messenger dejan la lista de no recortables). **Sin cambio de significado:** §6 y §6.2 (asignables por una persona, efectos automáticos y estado inicial de «Reparaciones»), RF-06 (terminología), RH-07 (todas las AR), evento «caso creado» añadido a EXT. |
-| 0.13 | 2026-11-13 | Preparación para detallar la arquitectura (ver [informes/2026-11-13-preparacion-arquitectura.md](informes/2026-11-13-preparacion-arquitectura.md)). **Cambios de significado:** glosario «Consentimiento» (por canal y contacto, no por caso), RN-08 (zona horaria del negocio y duraciones en tiempo transcurrido), RF-27 (qué crea versión y qué es de la instalación), RN-38, RF-52 y RF-53 (las respuestas las atiende el flujo «Respuesta de cita»), RF-04 (un evento puede declarar varios estados), RF-25 (un solo flujo con dos estados de entrada), escalera de recortes (RF-27 pasa a (2); RF-38 va con Messenger en (6)). **Sin cambio de significado:** campos propios de «Reparaciones» en §6 (los de CA-20a y RF-22), RN-05 (b) aclarado, glosario «Bandeja» con opciones. |
+| 0.1–0.13 | 2026-11-12 a 13 | Especificación ampliada más allá del enunciado: paquetes «Reparaciones» y «Citas», canales WhatsApp, Messenger y Telegram, bandeja del dueño, plugins, descubrimiento con agentes (EXT) y experimento con arnés. El detalle está en git (último commit de esa etapa: `79bf38e`). |
+| 1.0 | 2026-11-15 | **Reestructuración al alcance del enunciado más el acceso con roles (D-23 a D-26).** Ver la sección siguiente. |
 
 ## arquitectura.md
 
 | Versión | Fecha | Cambio |
 |---|---|---|
-| 0.1 | 2026-11-12 | Propuesta inicial |
-| 0.2 | 2026-11-13 | AD-01 resuelta: frontend en React. Se documenta el descarte de Blazor y se ajusta AR-R1. |
-| 0.3 | 2026-11-13 | AD-02 resuelta: canales Correo y Telegram. ADR-05 con tres adaptadores, sondeo para la vinculación y nuevo riesgo AR-R6. |
-| 0.4 | 2026-11-13 | Hacia la visión de adaptación a cada negocio: `Repairs` pasa a ser `Cases` más un paquete de datos; nuevo módulo `Discovery`; ADR-11 a ADR-14; AR-10 a AR-14; ciclo del descubrimiento; calendario con punto de decisión el 25 de noviembre; AR-R7 a AR-R10; AD-05 y AD-06. |
-| 0.5 | 2026-11-13 | Alineación con el enunciado y con WhatsApp: ADR-05 reescrita (canales simulados con política de WhatsApp), ADR-15 (simulador), ADR-16 (compilación a DAG y máquina de estados), ADR-17 (plugins), ADR-18 (desviaciones del enunciado), AR-15 a AR-18, AR-R11 a AR-R13, calendario revisado, el descubrimiento pasa a EXT. |
-| 0.6 | 2026-11-13 | La arquitectura del enunciado se trata como recomendación, no como exigencia: se ajustan ADR-18, AD-03 y AR-R13. |
-| 0.7 | 2026-11-13 | Reestructuración de la documentación (ver más abajo). |
-| 0.8 | 2026-11-13 | ADR-19 (respuestas entrantes y consultas); ADR-03 (temporizadores anclados), ADR-05 (Messenger), ADR-06, ADR-07, ADR-11 (campos propios consultables) y ADR-15 ajustados; ciclo de vida ampliado; AR-14 cubre consultas. |
-| 0.9 | 2026-11-13 | ADR-18 recuperado desde `humanos/`; ADR-20 (unidad de trabajo) y AR-19; AR-09 y ADR-09 protegen la sección 3; ADR-09 añade el oráculo separado; ADR-07 marca `Discovery` como EXT; ADR-11 declara la asignabilidad de estados. |
-| 0.10 | 2026-11-13 | Correcciones de la auditoría: ADR-06 (excepción de la ejecución que origina el cambio, un único nodo actual, ejecuciones reemplazadas), ADR-07 (puertos de `Core` y referencias de `Api`), ADR-09 (aprobación por persona revisora, `harness/scope.json`, oráculo sobre los CA comprometidos, `tests/Support/`), ADR-11 (efectos automáticos en el paquete), ADR-20 (anidamiento), ciclo de vida, estructura de la solución; AR-08, AR-09 y AR-19 ajustadas. |
-| 0.11 | 2026-11-13 | ADR-04 (UTC, zona IANA, duraciones en tiempo transcurrido), ADR-06 (evento con varios estados, opciones de Notificar al dueño), ADR-11 (consentimiento por canal y contacto, variables de plantilla), nueva ADR-21 (parámetros de flujo y de instalación). |
+| 0.1–0.11 | 2026-11-12 a 13 | Arquitectura para la especificación ampliada (módulos `Cases`, `Discovery`, `Sdk`; ADR-01 a ADR-21). Detalle en git. |
+| 1.0 | 2026-11-15 | Reestructuración al nuevo alcance. Ver la sección siguiente. |
 
-## Reestructuración de la documentación (2026-11-13)
+## Reestructuración 1.0 (2026-11-15)
 
-- requisitos.md 0.9 y arquitectura.md 0.7: se separa lo que implementa un agente de lo que lee una persona. Esto pasó a `humanos/`: decisiones D, preguntas OQ, hipótesis H, riesgos, supuestos, necesidades, trazabilidad, calendario, razones y alternativas de los ADR, y estos historiales. Sin cambios en RF, RN, RNF, CA ni AR.
-- RH-07 apuntaba a AR-01 a AR-09; se corrige a AR-01 a AR-18.
-- Las referencias a D, H, OQ, RI y AD se quitaron de los documentos de implementación.
-- Arquitectura: las secciones 1, 4, 5, 7, 8 y 9 pasaron a `humanos/`; la antigua sección 6 pasa a ser la 3 (las referencias externas a «sección 6» pasan a «sección 3»).
+El alcance pasa a ser el de `project-idea.txt` más el inicio de sesión con dos roles fijos. El ejemplo del enunciado sustituye al seguimiento de reparaciones como caso de demostración. El arnés y el experimento se mantienen, adaptados. El informe de arnés e hitos del 2026-11-13 pasa a [arnes-e-hitos.md](arnes-e-hitos.md), reescrito para el nuevo alcance; los otros dos informes del 2026-11-13 y `abiertas.md` se eliminan (siguen en git; las preguntas vigentes pasan a `contexto.md`). Los diagramas de `diseno/diagramas/` se rehacen.
+
+**IDs retirados** (no se reutilizan):
+- **RF:** RF-08, RF-15, RF-17, RF-20 a RF-29, RF-31 a RF-38, RF-41, RF-42, RF-50 a RF-53, RF-60 a RF-63, RF-70 a RF-72, RF-80 a RF-82, RF-92 a RF-94, con todos sus CA.
+- **CA de RF vigentes:** CA-02e, CA-06b, CA-06c, CA-06d, CA-07b, CA-07c, CA-12c, CA-13b, CA-14e, CA-90e.
+- **RN:** RN-01 a RN-05, RN-07, RN-08, RN-13 a RN-28, RN-31 a RN-38.
+- **RNF:** RNF-01 a RNF-06, RNF-10 a RNF-13, con sus CA-N; de RNF-07, CA-N07b y CA-N07c.
+- **RH:** RH-15 a RH-18 (corpus, métricas de descubrimiento, respuestas grabadas y plugin como cambio controlado).
+- **R:** R-03, R-05 a R-07.
+- **ADR:** ADR-11 a ADR-14, ADR-17, ADR-19 a ADR-21 (la atomicidad por paso de ADR-20 queda en ADR-03.2).
+- **AR:** AR-02, AR-10 a AR-15, AR-19.
+- **D, OQ, H, RI, AD:** todos salvo D-01, D-06, D-15 a D-17, OQ-07, OQ-08, AD-04, RI-01, RI-03 a RI-05, RI-13 y AR-R1 a AR-R4.
+
+**Nuevos:** RF-19 (flujo de ejemplo); RN-39 (eventos), RN-40 (condiciones), RN-41 (variables); CA-04c, CA-04d, CA-06f, CA-06g, CA-13c, CA-16g, CA-30d, CA-30e, CA-30f, CA-40f, CA-90g; D-23 a D-26.
+
+**Cambios de significado:**
+- El evento deja de ser «el caso entra a un estado» y pasa a ser un evento externo con tipo, identificador y datos (RF-04, CA-04a, CA-04b, CA-11a, CA-13a).
+- La Condición tiene salidas «sí» y «no»; un dato inexistente sigue «no» (RF-05, CA-05a, CA-05b, RN-10).
+- Acciones: Enviar correo, Enviar SMS y Llamar webhook (RF-06). El webhook guarda su respuesta en el contexto (RF-16).
+- Una acción que agota sus reintentos o falla sin reintento deja la ejecución Fallida; desaparece «Completada con fallo» y no hay bandeja (RN-09, RN-29, §5.1, CA-09b, CA-16c).
+- La ejecución deja de tener el estado Cancelada: no hay cambios de estado de un caso que la cancelen.
+- RN-06: un envío es una ejecución y un nodo. CA-07a usa 2 h.
+- RF-30: roles Editor y Lector en lugar de Dueño y Operador; cuentas sembradas desde la configuración; clave de integración para los eventos (CA-30a, CA-30b). RNF-07 queda en CA-N07a, ampliado a la clave de integración.
+- Simulador solo con correo, SMS y HTTP POST, con respuesta configurable y sin inicio de sesión (RF-90, RF-91).
+- RH-01: los CA pendientes son todos los no comprometidos (ya no hay prioridades). RH-02 y AR-09 dejan de proteger `tests/Fixtures/`. RH-10 mide sobre todos los RF. RH-11 cambia sus ejemplos.
+- `harness/scope.json`: añade CA-30a y CA-19b a los comprometidos.
+- AR-01: `Core` no referencia infraestructura; no existen `Cases`, `Discovery` ni `Sdk` (ADR-07). AR-05 se limita a contraseñas y clave de integración. AR-08 informa como pendientes todos los CA no comprometidos.
+- ADR-08: roles Editor y Lector y clave de integración. ADR-09 sin respuestas grabadas ni evaluación con modelo real. ADR-18 desarrolla la justificación de no adoptar la arquitectura recomendada.
