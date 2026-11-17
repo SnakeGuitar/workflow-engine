@@ -1,0 +1,9 @@
+3. Motor de Ejecución y Automatización de Flujos de Trabajo (Workflow Engine)
+* Objetivo: Crear una plataforma que permita a los usuarios diseñar y automatizar secuencias de tareas lógicas y condicionales basadas en eventos (por ejemplo: "Si un nuevo usuario se registra, esperar 2 horas, verificar si activó su cuenta; si no, enviarle un correo de recordatorio y notificar a soporte").
+* Arquitectura recomendada:Arquitectura de Microservicios Orquestada mediante un motor de estados finito (Finite State Machine) implementado en el Backend, siguiendo el patrón Saga para transacciones distribuidas si fuera necesario.
+* Base de datos recomendada:PostgreSQL para la persistencia del estado de los flujos de trabajo e históricos, y Redis para gestionar las cerraduras distribuidas (distributed locks) y evitar que una misma tarea se ejecute dos veces en entornos con múltiples servidores.
+* Tareas detalladas que debe realizar el estudiante:
+	• Desarrollar una interfaz gráfica interactiva para que el usuario arrastre, suelte y conecte nodos (Eventos, Condiciones, Acciones).
+	• Diseñar un parser en el backend que valide que el diagrama no contenga ciclos infinitos y lo transforme en una estructura JSON ejecutable estructurada como un grafo dirigido acíclico (DAG).
+	• Construir el motor de ejecución asíncrono encargado de evaluar las condiciones y ejecutar las acciones, soportando retrasos de tiempo (delays) y reintentos automáticos en caso de fallos de red.
+	• Integrar Webhooks salientes y un sistema de simulación de APIs de terceros (envío de correos, SMS, peticiones HTTP POST) para ejecutar las acciones del flujo.

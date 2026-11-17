@@ -1,27 +1,34 @@
 # AGENTS.md
 
-Motor de flujos web: editor de nodos → validación y compilación a DAG → motor asíncrono con esperas y reintentos → webhooks y simulador de correo, SMS y HTTP POST, con inicio de sesión y dos roles (Editor y Lector). El alcance es el de [project-idea.txt](project-idea.txt) más el acceso con roles. Plazo: 2026-12-02.
+Web workflow engine: node editor → validation and DAG compilation → asynchronous engine with waits/retries → webhooks and email/SMS/HTTP POST simulator, with sign-in and two roles (Editor and Reader). Scope: [project-idea.txt](project-idea.txt) plus role-based access. Deadline: 2026-12-02.
 
-## Qué leer
-- [docs/requisitos.md](docs/requisitos.md): qué construir. Los **CA** son el contrato. Lee los RF/CA de tu tarea más §4 (glosario), §5 (estados) y §6 (reglas).
-- [docs/arquitectura.md](docs/arquitectura.md): cómo. ADR vigentes, estructura de la solución (ADR-07) y reglas **AR** verificables (§3).
-- [docs/diseno/diagramas/](docs/diseno/diagramas/): vistas UML. Si contradicen los dos documentos anteriores, mandan los documentos.
-- `docs/humanos/`: contexto, decisiones e historial para el equipo. **No lo leas** para implementar.
+## What to read
 
-## Reglas duras
-- Tu tarea nombra los RF y CA objetivo (RH-03). Sin CA objetivo, pide aclaración.
-- Nada fuera de `docs/requisitos.md`. Si algo no está ahí, no se implementa.
-- No modifiques `tests/Acceptance/`, `docs/requisitos.md`, la sección 3 de `docs/arquitectura.md` ni `harness/scope.json` sin aprobación humana (línea `Approved-By:` en el commit con la persona que aprobó el PR). No escribas tú esa línea.
-- El alcance comprometido está en `harness/scope.json`.
-- Registra cada tarea en `harness/tasks.ndjson` con el comando `task` del arnés (RH-04).
-- Todo test de aceptación lleva el ID de su CA (`[Ac("CA-07a")]`). Un fallo debe citar el CA.
-- Contraseñas y clave de integración nunca a logs (AR-05).
-- El tiempo solo por `TimeProvider` (AR-03). Nunca `DateTime.Now`/`UtcNow`.
-- Dependencias de un solo sentido: `Api → Infrastructure → Core` y `Api → Core`. `Core` no conoce base de datos, HTTP ni ASP.NET (AR-01). Nadie referencia `Simulator` (AR-16).
-- Ningún archivo de código supera 400 líneas (AR-07).
+- [docs/en/requirements.md](docs/en/requirements.md): what to build. **CA IDs are the contract.** Read the task's RF/CA plus §4 (glossary), §5 (states), §6 (rules).
+- [docs/en/architecture.md](docs/en/architecture.md): how. Current ADRs, solution structure (ADR-07), machine-verifiable **AR** rules (§3).
+- [docs/en/design/diagrams/](docs/en/design/diagrams/): UML views. Requirements and architecture take precedence over conflicting diagrams.
+- `docs/en/human/`: team context, decisions and history. **Do not read for implementation.**
+- [docs/es/](docs/es/): equivalent Spanish documentation. English is authoritative; update both languages together.
 
-## Pila
-.NET (LTS) + ASP.NET Core, PostgreSQL (EF Core + Npgsql), React + TypeScript (React Flow). Monolito modular, una instancia; sin microservicios, Saga ni Redis (ADR-18). Verifica versiones de paquetes al instalarlas.
+## Hard rules
 
-## Cambios en la documentación
-Un cambio en `docs/requisitos.md` o `docs/arquitectura.md` describe solo el estado vigente, sin historial ni "antes decía". El historial va a `docs/humanos/historial.md`; los IDs nunca se reutilizan.
+- Write code, identifiers, comments, UI text, API contracts, configuration keys and file names in **English**. Documentation has **English and Spanish** versions; executable examples use English in both.
+- Preserve stable RF, RNF, RN, CA, RH, AR, ADR and CU IDs across languages. Their prefixes are identifiers, not code naming conventions.
+- Implementation tasks name target RF/CA (RH-03); ask for clarification if absent. Documentation-only maintenance names the relevant specification/rule IDs and records checks instead of inventing product criteria.
+- Nothing beyond `docs/en/requirements.md` is implemented.
+- Do not modify `tests/Acceptance/`, either requirements document, section 3 of either architecture document or `harness/scope.json` without human approval (a commit `Approved-By:` line naming the PR approver). Do not author that line yourself. Explicit user instructions take precedence; never fabricate review evidence.
+- Committed scope lives in `harness/scope.json` (`spec`, `description`, `committed`, `support`).
+- Record each task in `harness/tasks.ndjson` using the harness `task` command (RH-04). Until the harness exists, append an honest manual record identifying that limitation.
+- Every acceptance test carries its CA ID (`[Ac("CA-07a")]`). Failures cite the CA.
+- Never log passwords or integration keys (AR-05).
+- Obtain time only through `TimeProvider` (AR-03). Never `DateTime.Now`/`UtcNow`.
+- One-way dependencies: `Api → Infrastructure → Core`, `Api → Core`. `Core` knows no database, HTTP or ASP.NET (AR-01). No project references `Simulator` (AR-16).
+- No code file exceeds 400 lines (AR-07).
+
+## Stack
+
+.NET LTS + ASP.NET Core, PostgreSQL (EF Core/Npgsql), React + TypeScript (React Flow). Modular monolith, one instance; no microservices, Saga or Redis (ADR-18). Verify package versions at installation.
+
+## Documentation changes
+
+Requirements and architecture describe only the current state, without change history or “previously” notes. History belongs in `docs/en/human/changelog.md` and its Spanish counterpart. Never reuse IDs. Keep both language versions equivalent; all API paths, JSON examples, class/member names and configuration keys remain English.

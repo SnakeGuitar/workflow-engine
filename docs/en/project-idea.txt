@@ -1,0 +1,9 @@
+3. Workflow Execution and Automation Engine (Workflow Engine)
+* Objective: Build a platform that lets users design and automate event-driven sequences of logical and conditional tasks (for example: "When a new user registers, wait 2 hours, check whether they activated their account; if not, send them a reminder email and notify support").
+* Recommended architecture: Orchestrated microservices using a backend finite state machine, following the Saga pattern for distributed transactions if necessary.
+* Recommended database: PostgreSQL for workflow state and history persistence, and Redis for distributed locks to prevent duplicate task execution across multiple servers.
+* Detailed student tasks:
+  - Develop an interactive graphical interface to drag, drop and connect nodes (Events, Conditions, Actions).
+  - Design a backend parser that validates the diagram contains no infinite cycles and transforms it into executable JSON structured as a directed acyclic graph (DAG).
+  - Build an asynchronous execution engine that evaluates conditions and performs actions, supporting time delays and automatic retries on network failures.
+  - Integrate outgoing webhooks and a system simulating third-party APIs (email, SMS, HTTP POST requests) to perform workflow actions.
