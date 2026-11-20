@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Version | 1.1 |
+| Version | 1.3 |
 | Deadline | 2026-12-02 |
 | Team | 2 people + coding agents |
 | Scope source | [project-idea.txt](project-idea.txt) (course assignment) |
@@ -12,7 +12,7 @@
 
 1. **Stable IDs.** `RF`: functional requirement; `RNF`: nonfunctional requirement; `RN`: rule; `CA`: acceptance criterion; `RH`: harness requirement; `AR`: architecture rule. Never reuse an ID; numbering gaps represent retired IDs. These identifiers remain unchanged in both languages for traceability.
 2. **Acceptance criteria.** Use `Given / When / Then`. Every CA is verifiable without human judgment except those marked **[HUMAN]**.
-3. **Time.** Time-based criteria use a controllable clock (RNF-08): “advance 2 h” means simulated time.
+3. **Time.** Local time-based criteria use a controllable clock (RNF-08): “advance 2 h” means simulated time.
 4. **Acceptance criteria are the contract.** Agents must not change a CA to make a test pass. Record changes to this document in `human/changelog.md` (RH-02, RH-13).
 
 ## 1. Purpose and scope
@@ -21,7 +21,7 @@
 
 **Reference example (from the assignment).** “When a new user registers, wait 2 hours, check whether they activated their account; if not, send a reminder email and notify support.” Ship it as an installed example workflow (RF-19).
 
-**Scope: the assignment's four tasks plus role-based access (RF-30).**
+**Scope.** The assignment, role-based access, personal connections, extensible integrations and local artifact tasks (RF-30, RF-100, RF-101, RF-102).
 
 | # | Assignment task | Requirements |
 |---|---|---|
@@ -30,7 +30,7 @@
 | T3 | Asynchronous execution engine: evaluates conditions, performs actions, supports delays and retries on network failures | RF-04, RF-05, RF-07, RF-09 through RF-13, RF-18 |
 | T4 | Outgoing webhooks and simulated third-party APIs (email, SMS, HTTP POST) | RF-06, RF-16, RF-90, RF-91 |
 
-**Out of scope.** User management through the UI, self-registration, password recovery, roles beyond Editor and Reader, per-workflow permissions and multiple tenants. Specific business domains. Channels beyond email, SMS and HTTP POST, and real third-party services. Incoming messages. Plugins. Parallel execution within a workflow. Multiple-instance scaling. Mobile application.
+**Out of scope.** Account administration in the UI, self-registration, password recovery, additional roles, configurable workflow ACLs, multiple tenants, parallel branches, multiple instances and mobile apps. Service compatibility depends on an accessible interface, authorization and an installed operation descriptor or adapter (RF-101).
 
 **Committed scope:** the criteria in `harness/scope.json` (protected, RH-02). The remainder is a target.
 
@@ -50,7 +50,7 @@
 - R-01 Web system, accessible in a browser without installation.
 - R-02 Deadline: 2026-12-02. Team of 2 people with coding agents.
 - R-04 Interface in English.
-- R-08 Fulfill the four assignment tasks (section 1); the only addition is role-based access (RF-30).
+- R-08 Deliver the four assignment tasks and RF-30, RF-100, RF-101 and RF-102.
 
 ## 4. Glossary
 
@@ -61,12 +61,14 @@
 | **Diagram** | Editor data: nodes, positions, parameters and connections. |
 | **Executable DAG** | JSON document compiled from a valid workflow: nodes, edges, start node, parameters and topological order. The engine executes only this document. |
 | **Version** | Immutable copy of the executable DAG created when a workflow is activated. |
-| **Event** | Fact received over HTTP: a **type** (e.g. `user.registered`), a unique **identifier**, and JSON **data**. |
+| **Event** | Fact received over HTTP: a **type** (e.g. `user.registered`), an **identifier** unique within its authenticated source, and JSON **data**. |
 | **Execution** | One run of a workflow triggered by an event. |
 | **Step** | Work done by an execution at a node. Each action attempt is a step. |
-| **Context** | Readable execution data: `event.<field>` (event data), `nodes.<id>.statusCode` and `nodes.<id>.response.<field>` (result of a completed webhook). |
+| **Context** | Readable execution data: `event.<field>` (event data), `nodes.<id>.statusCode` and `nodes.<id>.response.<field>` (result of a completed webhook or provider action). |
 | **Variable** | `{path}` in a parameter, replaced with a context value during execution (e.g. `{event.email}`). |
-| **Action** | Node task: **Send email**, **Send SMS**, or **Call webhook**. |
+| **Action** | Registered task from RF-06, RF-100, RF-101 or RF-102. |
+| **Connector** | Provider descriptor or adapter with versioned trigger or action operations. |
+| **Connection** | Authorization granted by one Editor for one provider account. A workflow node references it by ID. |
 | **Outgoing webhook** | HTTP POST to a URL as a workflow action. |
 | **Unique reference** | Delivery identifier (execution and node) included in the request so the receiver can discard duplicates. |
 | **Simulator** | Project application simulating third-party services and injecting failures, used for demonstrations and as a test double. |
@@ -101,14 +103,14 @@ Editing an active workflow's diagram does not change the version being executed 
 
 | ID | Rule |
 |---|---|
-| RN-06 | The same delivery (same execution and node) is delivered **once**, despite retries or restarts: it carries a unique reference and the receiver discards duplicates. |
-| RN-09 | Retry an action that fails with a retryable error (RN-29) up to **3 times**, after **1 min, 5 min and 30 min**. Once retries are exhausted, the execution becomes Failed. |
-| RN-10 | A workflow is **valid** if it has exactly one Event node; has no cycles; every node is reachable from the Event; node identifiers are unique; each non-Condition node has at most one output; each Condition has at most one “yes” and one “no” output; every Timer is longer than 0 and at most **90 days**; and it uses only registered actions (RF-06) with valid parameters (well-formed URL, recipient present). |
+| RN-06 | For simulator deliveries: The same delivery (same execution and node) is delivered **once**, despite retries or restarts: it carries a unique reference and the receiver discards duplicates. |
+| RN-09 | Retry an action that fails with a retryable error (RN-29 or CA-100e) up to **3 times**, after **1 min, 5 min and 30 min**. Once retries are exhausted, the execution becomes Failed. |
+| RN-10 | A workflow is **valid** if it has exactly one Event node; has no cycles; every node is reachable from the Event; node identifiers are unique; each non-Condition node has at most one output; each Condition has at most one “yes” and one “no” output; every Timer is longer than 0 and at most **90 days**; and it uses only registered actions (RF-06, RF-100, RF-101, RF-102) with valid parameters (well-formed URL, recipient present). |
 | RN-11 | Each activation creates a workflow version. An execution keeps its starting version. |
 | RN-12 | Record every step: node, start, end, result, summarized input, attempt number and error, if any. Records cannot be changed or deleted. |
-| RN-29 | Retryable errors: network failure, timeout (**10 s**) and 5xx responses. Do not retry 4xx responses. Applies to all three actions, since all call third parties over HTTP. |
+| RN-29 | For RF-06: Retryable errors: network failure, timeout (**10 s**) and 5xx responses. Do not retry 4xx responses. Applies to all three actions, since all call third parties over HTTP. |
 | RN-30 | Execution state changes must follow section 5.1. Record each change and its timestamp. |
-| RN-39 | Ignore events whose identifier has already been received. Each new event creates one execution per active workflow whose Event node declares that type. |
+| RN-39 | Deduplicate by (authenticated source, event ID). Match active workflows by source and type. The integration-key endpoint is one source; each authenticated trigger connection is a separate source. |
 | RN-40 | A Condition compares a context value with a literal (number, boolean or string) using `=`, `≠`, `>`, `≥`, `<`, `≤`, “contains” or “exists”. True follows “yes”; false or missing data follows “no”, and missing data is recorded. If the selected output is unconnected, the execution ends as Completed. |
 | RN-41 | Resolve variables when executing the step. A variable missing from the context fails the step without retry and leaves the execution Failed with the variable name. |
 
@@ -144,17 +146,17 @@ Editing an active workflow's diagram does not change the version being executed 
 
 ### 7.2 Execution
 
-**RF-04 Event trigger.** The source system sends an event to `POST /api/events` (type, identifier and data) with the integration key (CA-30d). An active workflow runs when an event matches its Event node's declared type (RN-39).
+**RF-04 Event trigger.** The source system sends an event to `POST /api/events` (type, identifier and data) with the integration key (CA-30d). An active workflow runs when an event matches its Event node's source and declared type (RN-39).
 - **CA-04a** Given an active workflow with event type `user.registered`, when an event of that type arrives, then create exactly one execution using the current version and place the event data in its context.
 - **CA-04b** Given no active workflow for an event type, when such an event arrives, then accept it and create no execution.
 - **CA-04c** An Editor can send a test event from the UI with a type and JSON data.
-- **CA-04d** Given two active workflows with the same event type, when an event arrives, then create one execution of each.
+- **CA-04d** Given two active workflows with the same source and event type, when an event arrives, then create one execution of each.
 
 **RF-05 Conditions.** A Condition node evaluates the context and chooses an output (RN-40).
 - **CA-05a** Given `nodes.check.response.active = true`, when the value is `true`, then follow “yes”; when `false`, follow “no”.
 - **CA-05b** When a condition uses missing data, then execution continues through “no” and records that fact.
 
-**RF-06 Action catalog.** Workflows may use only registered actions: **Send email** (recipient, subject, body), **Send SMS** (phone, text), and **Call webhook** (RF-16). All three call a third party over HTTP (the simulator in the MVP) and follow RN-09 and RN-29.
+**RF-06 Assignment action catalog.** RF-100 adds provider operations. Workflows may use only registered actions. Assignment actions are **Send email** (recipient, subject, body), **Send SMS** (phone, text), and **Call webhook** (RF-16). All three call a third party over HTTP (the simulator in the MVP) and follow RN-09 and RN-29.
 - **CA-06a** When Send email executes, then the simulator receives exactly one email with variables resolved.
 - **CA-06e** Given a workflow with an unregistered action, when validated, then it is invalid and the error names the action.
 - **CA-06f** When Send SMS executes, then the simulator receives exactly one SMS with variables resolved.
@@ -215,9 +217,9 @@ Editing an active workflow's diagram does not change the version being executed 
 
 ### 7.4 Access
 
-**RF-30 Sign-in and roles.** Username/password access with two fixed roles: **Editor** (design, validate, activate/deactivate workflows, send test events and read) and **Reader** (read workflows, executions and history only). Create accounts from configuration at installation. The source system uses the integration key, not an account. The simulator represents external services and does not require sign-in.
-- **CA-30a** Without a session, deny all data access and actions except sign-in and event reception (CA-30d).
-- **CA-30b** A Reader can view workflows, executions and history; attempts to save, activate or deactivate a workflow or send a test event are rejected without changes. An Editor can perform all operations.
+**RF-30 Sign-in and roles.** Username/password access with two fixed roles: **Editor** (design, validate, activate/deactivate workflows, send test events and read) and **Reader** (read workflows, executions and history only). Create accounts from configuration at installation. The generic event endpoint authenticates the source system with the installation key. Provider notifications follow RF-100. The simulator represents external services and does not require sign-in.
+- **CA-30a** Without a session, deny all data access and actions except sign-in and authenticated event reception (CA-30d, RF-100).
+- **CA-30b** A Reader can view workflows, executions and history; attempts to save, activate or deactivate a workflow or send a test event are rejected without changes. Editor operations on connected workflows require ownership under RF-100.
 - **CA-30c** After 5 consecutive failed attempts, lock the account for 5 minutes.
 - **CA-30d** Reject events sent to `POST /api/events` without a valid integration key and create no executions.
 - **CA-30e** Readers see a read-only editor without controls to modify, activate or send events.
@@ -238,11 +240,56 @@ Editing an active workflow's diagram does not change the version being executed 
 - **CA-91b** A failure configured for the next N requests applies to those N requests and then disables itself.
 - **CA-91c** Failures can be enabled through the simulator UI and automated tests.
 
+### 7.6 Personal provider connections
+
+**RF-100 Personal provider connections.** The Editor authorizes a provider account from the UI and selects the connection and operation at each node. The reference workflow exercises these operations. RF-101 defines how to add services.
+
+| Operation (v1) | Input | Output | Acceptance |
+|---|---|---|---|
+| `shopify.order.created` | Authorized store | `event.orderId`, `event.items` | CA-100b, CA-100g |
+| `openai.summarize` | Order items, instructions | `nodes.summary.response.text` | CA-100c, CA-100g |
+| `google.createDocument` | Drive folder ID, title, text | `nodes.document.response.documentId` | CA-100c, CA-100g |
+
+Order IDs, instructions, folder IDs, titles, summary text and document IDs are strings. Order items are a JSON array. The order ID maps to the document title and the summary maps to its body. Output examples use node IDs `summary` and `document`. Google creates a native Google Doc in the selected Drive folder. Each connection grants only the permissions required for its operations.
+
+- **CA-100a** Given two Editors and a Reader, only the owning Editor can list, select, use or revoke their connections. Saving, editing, activating, deactivating or testing a connected workflow requires ownership of the workflow and every referenced connection. Rejected requests cause zero changes and zero provider calls.
+- **CA-100b** Given active triggers for stores A and B, delivering the same authenticated order event twice for A creates one execution for A and zero for B. Delivering the same event ID from B creates one execution for B. An unauthenticated notification creates zero executions.
+- **CA-100c** Given connected accounts and a workflow owned by the Editor who created it, the UI offers the catalog inputs and preceding node outputs. Saving and reopening preserves the mapping. Activation rejects an unknown output or incompatible input, naming the node. Valid activation pins operation versions and connection IDs in the DAG. Publishing a new operation version leaves the active DAG bound to its original version.
+- **CA-100d** Given a revoked connection, activation is rejected. An in-flight execution reaching an action with that connection becomes Failed before sending it. Subsequent notifications for the revoked trigger create zero executions.
+- **CA-100e** Given a provider action whose response is lost after dispatch, including worker restart, stop with Failed and reason `delivery_uncertain` and send zero further requests for that step. Apply RN-09 only to failures known to precede dispatch. Explicit provider errors terminate the step.
+- **CA-100f** Given a unique credential marker for each provider, zero markers appear in API responses, the diagram, compiled DAG, history, technical logs or harness reports.
+- **CA-100g** [LIVE] [evidence: shopify_order, openai_response, google_document] Given dedicated real accounts connected through the UI and an active workflow, create a uniquely identified order in the authorized Shopify store. Within 5 minutes observe one completed execution, a successful OpenAI summary call with nonempty output, and exactly one Google Doc with the order ID as title in the selected Drive folder. Read its content independently through Google and compare it with the summary output. Record only redacted provider references and verdicts.
+
+### 7.7 Extensible services and local work
+
+**RF-101 Service-independent operations.** An Editor registers a versioned HTTP operation descriptor from the UI, binds a personal connection, maps inputs and outputs, and uses the operation in the same editor as RF-100. Descriptors declare operation ID, version, trigger/action kind, input/output schemas, HTTP method, endpoint and credential binding. For other protocols, protocols with custom authentication, or native SDKs, the operator installs a versioned adapter implementing the same operation contract. Provider credentials and verified event sources remain scoped to their connection.
+
+- **CA-101a** Given an HTTP service with a fresh provider ID and an operation chosen by the oracle after the application is built, register it, bind a personal credential, send a mapped request and read its mapped response in the next node. The oracle compares method, path and payload. The application build hash stays identical.
+- **CA-101b** Given an independently supplied adapter with a non-HTTP fixture protocol, install it, authorize its connection, receive an authenticated trigger and invoke its action. Verify the returned value, rejection of another owner's connection, and identical engine and editor binaries. Removing a required adapter version prevents new activation and fails the affected step explicitly.
+- **CA-101c** [LIVE] [evidence: service_operation, remote_result] Given an authorized real service outside the RF-100 example, register its operation and execute a flow with a unique input. Within five minutes the oracle reads the correlated result independently at that service and compares the value with the expected input. The application build hash stays identical.
+
+**RF-102 Local tasks and artifacts.** An Editor can compose local steps on the machine running the engine, including writing a script, executing it and publishing files. Inputs can be user-supplied files, mapped values, or artifacts from previous nodes. Local execution works offline. Each completed artifact has an immutable ID, filename, media type, byte count and SHA-256 digest. Downstream nodes consume it by ID and its owner can download it from execution history.
+
+Local operation examples use the same catalog. The evidence profile for these rows is `offline`.
+
+| Operation (v1) | Input | Output | Acceptance |
+|---|---|---|---|
+| `local.document` | Content and format | DOCX, PPTX or XLSX artifact | offline CA-102a |
+| `local.analyze` | Dataset and analysis | Report artifact | offline CA-102b |
+| `local.writeScript` | Source text | Script artifact | offline CA-102c |
+| `local.runScript` | Script artifact and arguments | Declared output artifacts | offline CA-102c, CA-102d |
+
+- **CA-102a** Given an offline workflow and input marker, generate DOCX, PPTX and XLSX artifacts. Download and open them with independent format readers. Assert the marker in the document body, a slide title and workbook cell A1 respectively. Check each reported byte count and digest against the downloaded bytes.
+- **CA-102b** Given a CSV containing groups A, B, A with values 2, 4, 6, analyze the data locally and produce a report containing counts A=2, B=1 and means A=4, B=4. Repeat with different input and compare the downloaded report against aggregates computed independently from that input. For the ordered series 2, 4, 6, 3, 2, identify the longest strictly increasing contiguous run as 2, 4, 6 and report its length as 3.
+- **CA-102c** Given a script-writing step, download the generated Python script and pass its artifact ID plus a new input value to a local execution step. For the acceptance case the input is a string. The returned JSON file must contain that value and its length. Check the result after restarting the engine and verify the same artifact ID, bytes and digest.
+- **CA-102d** Given a timed-out or nonzero-exit script, fail the step, stop its child processes and publish zero partial files. A script cannot read another execution's workspace, host credentials or files outside its assigned inputs and workspace. Deny downloads by a different user. On recovery publish each successful output once per execution, node and output name.
+- **CA-102e** Given a flow mapping an external operation's output into a local report and its resulting artifact into a second external operation, the receiver obtains the same bytes and digest as the owner downloads from history.
+
 ## 8. Nonfunctional requirements
 
 | ID | Requirement | Verification criterion |
 |---|---|---|
-| RNF-08 | **Testability.** | **CA-N08a** Verify every wait with a controllable clock. **CA-N08b** The simulator acts as a test double with RF-91 failure injection. **CA-N08c** The complete acceptance suite runs within 10 min without real external services. |
+| RNF-08 | **Testability.** | **CA-N08a** Verify local waits with a controllable clock. **CA-N08b** The simulator acts as a test double with RF-91 failure injection. **CA-N08c** The complete local acceptance suite runs within 10 min without real external services. |
 | RNF-07 | **Security.** | **CA-N07a** No operation returns a password or integration key, and neither appears in technical logs. |
 | RNF-09 | **Localization.** | **CA-N09a** English UI; YYYY-MM-DD dates and 24-hour time. |
 | RNF-14 | **Reproducible installation.** | **CA-N14a** [HUMAN] From a clean repository, following the README, `docker compose up` brings up the application, simulator and example workflow within 15 min. |
@@ -267,3 +314,4 @@ Editing an active workflow's diagram does not change the version being executed 
 | RH-12 | **Human review.** Every integrated change has a human reviewer and checklist. | Record a reviewer for 100% of integrated changes. Authors can explain every delivered part **[HUMAN]**. |
 | RH-13 | **Versioned specification.** Every measurement identifies this document's version. | Every RH-04 record includes the version. |
 | RH-14 | **Usage budget.** Track usage per model and stop at the configured limit. | Start no new task once the limit is reached. |
+| RH-100 | **Delivery gates.** Check bilingual IDs, references, scope version and operation-to-CA mappings. For each local/live suite report committed CA covered, passed and required separately. | Require 100% passed, zero skipped and local duration ≤600 s. Missing runner, prerequisites or live credentials yields blocked. Failed assertions yield failed. Record baseline and spec with each result. M1–M6 measure agent work separately. |

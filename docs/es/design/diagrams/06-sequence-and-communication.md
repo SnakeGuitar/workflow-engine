@@ -133,3 +133,23 @@ sequenceDiagram
   end
   Note over Pro,DB: con dos procesadores, SKIP LOCKED reparte las filas y ningún paso se ejecuta dos veces (CA-13c)
 ```
+
+## Conexiones personales (RF-100)
+
+El titular configura las tres operaciones versionadas y la carpeta de destino antes de activar el flujo.
+
+```mermaid
+sequenceDiagram
+  participant Shopify
+  participant Api
+  participant Engine
+  participant OpenAI
+  participant Google
+  Shopify->>Api: Notificación de pedido
+  Api->>Api: Verificar origen y deduplicar por conexión
+  Api->>Engine: Iniciar la versión activa correspondiente
+  Engine->>OpenAI: Resumir el pedido con la conexión del titular
+  OpenAI-->>Engine: Texto del resumen
+  Engine->>Google: Crear documento en la carpeta elegida
+  Google-->>Engine: ID del documento
+```

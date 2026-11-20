@@ -1,0 +1,11 @@
+name: Specification contract
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 harness/verify.py contract
+      - run: python3 -m unittest discover -s harness -p 'test_*.py'

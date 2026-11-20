@@ -2,8 +2,8 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 |
-| Entrada | [requirements.md](requirements.md) v1.1 |
+| Versión | 1.3 |
+| Entrada | [requirements.md](requirements.md) v1.3 |
 | Razones y alternativas | [human/decisions.md](human/decisions.md) (no necesario para implementar) |
 | Arnés e hitos | [human/harness-and-milestones.md](human/harness-and-milestones.md) |
 | Diagramas | [design/diagrams/](design/diagrams/) |
@@ -45,9 +45,9 @@ El enunciado **recomienda** (no exige) microservicios orquestados con una máqui
   1. **Una ejecución es una fila** con su versión de flujo, contexto (JSON), nodo actual, estado, número de intento y, si espera, el instante en que vence (UTC). Cada paso se registra en una tabla **solo de inserción** (RN-12).
   2. **Cada avance es una transacción:** actualizar la ejecución, insertar el paso y programar lo siguiente se confirma o se revierte en bloque. Solo `Infrastructure` abre transacciones, detrás del puerto de almacenamiento de `Core`.
   3. **Un procesador en segundo plano** consulta cada 1 s las ejecuciones Pendientes, las Esperando ya vencidas y las En curso cuya concesión expiró, y las reclama con `FOR UPDATE SKIP LOCKED` y una **concesión que expira**: si el proceso cae a mitad de paso, otro reclamo la retoma (CA-10b).
-  4. **Envíos con referencia única** (`execution:node`). Antes de llamar al tercero, una transacción guarda el envío con su referencia; después de la llamada, otra registra el resultado y avanza. Si el proceso cae entre ambas, al reanudar se repite la llamada con la **misma referencia** y el receptor descarta el duplicado (CA-10c, CA-11b). Es **entrega al menos una vez más idempotencia**, no "exactamente una vez".
+  4. Para envíos al simulador: **Envíos con referencia única** (`execution:node`). Antes de llamar al tercero, una transacción guarda el envío con su referencia; después de la llamada, otra registra el resultado y avanza. Si el proceso cae entre ambas, al reanudar se repite la llamada con la **misma referencia** y el receptor descarta el duplicado (CA-10c, CA-11b). Es **entrega al menos una vez más idempotencia**, no "exactamente una vez".
   5. **Un reintento es una espera del mismo nodo:** la ejecución pasa a Esperando hasta el siguiente intento (1, 5 y 30 min, RN-09) y repite el nodo con el número de intento siguiente.
-  6. **Deduplicación de eventos** con restricción única sobre el identificador del evento (CA-11a).
+  6. **Deduplicación de eventos** con restricción única sobre (origen autenticado, identificador del evento) (CA-11a).
 - **Límite:** la precisión de un temporizador depende del intervalo de consulta (1 s).
 
 ### ADR-04 El tiempo es una dependencia
@@ -59,7 +59,7 @@ El enunciado **recomienda** (no exige) microservicios orquestados con una máqui
 - **Motivo:** RF-06, RF-16, RN-29.
 - **Decisión:**
   - `Core` define `IAction`: nombre, esquema de parámetros y `ExecuteAsync(resolvedParameters, reference)`, que devuelve **Success** (con código y cuerpo, si los hay), **Retryable** o **PermanentFailure** según RN-29.
-  - `Infrastructure` implementa las tres acciones con `HttpClient` (tiempo máximo 10 s). Correo y SMS llaman a los receptores del simulador; Llamar webhook, a la URL del nodo. Las URL del simulador son configuración.
+  - `Infrastructure` implementa las tres acciones de RF-06 con `HttpClient` (tiempo máximo 10 s). Correo y SMS llaman a los receptores del simulador; Llamar webhook, a la URL del nodo. Las URL del simulador son configuración.
   - El intérprete resuelve las variables antes de llamar a la acción (RN-41) y guarda la respuesta del webhook en `nodes.<id>` del contexto (CA-16g).
 
 ### ADR-06 Los flujos son datos validados, y el motor los interpreta
@@ -67,7 +67,7 @@ El enunciado **recomienda** (no exige) microservicios orquestados con una máqui
 - **Decisión:**
   - Un flujo es un **documento JSON** guardado por **versión inmutable**.
   - Un **validador puro**, sin acceso a datos, implementa RN-10 y devuelve todos los errores (CA-02g).
-  - Los tipos de nodo y las acciones se registran en un **registro único y cerrado**: un flujo con una acción desconocida no se valida (CA-06e).
+  - Los tipos de nodo y las acciones se registran en un **registro único y versionado**: un flujo con una acción desconocida no se valida (CA-06e).
   - **Evento** declara un tipo de evento. **Condición** declara ruta del contexto, operador y valor, y tiene salidas «sí» y «no». **Temporizador** declara una duración. **Acción** declara la acción y sus parámetros.
   - Un nodo que no es Condición tiene como máximo una salida, así que una ejecución tiene un único nodo actual (ADR-03).
 
@@ -130,13 +130,13 @@ docker-compose.yml
 ### ADR-09 Estrategia de pruebas y arnés
 - **Motivo:** RH-01 a RH-14, RNF-08. El detalle operativo (componentes, CI, hitos) está en [human/harness-and-milestones.md](human/harness-and-milestones.md).
 - **Decisión:**
-  - **Pruebas de aceptación** contra la aplicación completa en memoria (`WebApplicationFactory`), con PostgreSQL real de prueba (un contenedor por job), reloj falso y el simulador en memoria como doble de los terceros.
+  - **Pruebas de aceptación locales** contra la aplicación completa en memoria (`WebApplicationFactory`), con PostgreSQL real de prueba (un contenedor por job), reloj falso y el simulador en memoria como doble de los terceros.
   - Cada prueba lleva un atributo con su ID (`[Ac("CA-07a")]`). El comando `trace` cruza esos IDs con `docs/en/requirements.md` y `harness/scope.json` y calcula la cobertura de CA (RH-01). Los mensajes de fallo incluyen el ID del CA y qué se esperaba (RH-06).
   - **Archivos protegidos (RH-02):** `tests/Acceptance/`, ambas versiones de `requirements.md`, la sección 3 de ambas versiones de `architecture.md` y `harness/scope.json`. Un chequeo en CI compara su huella y falla si cambian sin la aprobación de una persona revisora: la rama principal exige revisión de los propietarios (CODEOWNERS) y la línea `Approved-By:` del commit debe nombrar a quien aprobó el PR. Los agentes no escriben esa línea.
   - **Alcance comprometido:** `harness/scope.json` lista los CA comprometidos con las claves `spec`, `description`, `committed` y `support`; la trazabilidad (RH-01, AR-08) se mide contra él.
   - **Oráculo separado:** las pruebas de aceptación de los CA comprometidos se escriben sin acceso a la implementación, a partir del texto del CA y del contrato OpenAPI (ADR-08), y una persona las revisa antes de congelarlas; el registro de tareas anota la condición (RH-04).
   - La infraestructura de pruebas (fábrica de la aplicación, reloj falso, aserciones con ID de CA) vive en `tests/Support/` y no está protegida.
-  - Las pruebas de la interfaz (CA-40, CA-30e, CA-04c) usan un navegador automatizado (Playwright).
+  - Las pruebas de la interfaz (RF-40, CA-30e, CA-04c) usan un navegador automatizado (Playwright).
   - **Registro del experimento (RH-04):** cada tarea de agente escribe una línea en `harness/tasks.ndjson` con versión de la especificación, commit base, modelo, tarea, RF y CA, inicio y fin, iteraciones, uso, resultado e intervenciones. De ahí salen M1 a M6 (RH-08). El comando `task` rechaza una tarea sin CA (RH-03) o con el presupuesto agotado (RH-14).
 
 ### ADR-10 El historial es dato, no log; las credenciales no se registran
@@ -161,13 +161,25 @@ docker-compose.yml
 
 ---
 
+### ADR-100 Adaptadores de proveedor y conexiones personales
+
+Las operaciones de RF-100 comparten un registro versionado de esquemas, permisos y políticas de envío. La interfaz obtiene los metadatos del catálogo mediante la API. Core valida las asignaciones y compila versión de operación e ID opaco de conexión. Api comprueba la titularidad del flujo y la conexión en cada escritura. Infrastructure resuelve credenciales cifradas por titular al enviar, comprueba la revocación, gestiona suscripciones y verifica las notificaciones antes de determinar su origen. El endpoint con clave de integración conserva su propio origen. Vincular el retorno de autorización al Editor que la inició. Rotar credenciales conserva la identidad de la conexión. Excluir secretos de la serialización de flujos y la observabilidad.
+
+Persistir la intención de envío antes del efecto remoto. Recuperar una intención de proveedor pendiente según CA-100e. Las pruebas locales usan adaptadores controlados y reloj falso. El oráculo real crea un pedido nuevo, correlaciona la solicitud al proveedor y lee el documento resultante de forma independiente con cuentas de prueba autorizadas (CA-100g). RH-100 exige ambos veredictos para la entrega.
+
+### ADR-101 Operaciones extensibles y ejecución local
+
+Core resuelve los nombres contra una captura inmutable del catálogo al compilar. El DAG fija versión de operación, huella del adaptador y asignaciones. Infrastructure carga paquetes de adaptadores instalados al iniciar e interpreta descriptores HTTP del registro. La interfaz presenta los esquemas de operación. Añadir un proveedor requiere solo un descriptor o paquete adaptador. Limitar credenciales al destino autorizado, incluidas las redirecciones. Aplicar las reglas de titularidad, revocación y envío incierto de RF-100 a operaciones remotas.
+
+Infrastructure ejecuta las operaciones locales bajo una identidad aislada en un espacio temporal del host del motor. Montar las entradas declaradas en modo lectura, habilitar un directorio de salida, imponer un tiempo máximo y denegar la red a tareas sin conexión. Empaquetar el entorno de ejecución y sus bibliotecas declaradas por separado de los datos privados del host. Pasar argumentos como valores. Guardar los bytes finales de forma duradera antes de confirmar los metadatos y el avance del nodo en una transacción de base de datos. Una restricción única por ejecución, nodo y nombre de salida evita duplicados al recuperar. Descartar archivos temporales abandonados. La API autoriza la descarga por titular y transmite los bytes almacenados. Core recibe referencias tipadas a artefactos. Un flujo exclusivamente local funciona sin cuentas de proveedores.
+
 ## 2. Ciclo de vida de una ejecución
 
 ```
-POST /api/events
-   │  dedup por identificador de evento (CA-11a)
+POST /api/events o notificación autenticada de proveedor
+   │  dedup por origen e identificador de evento (CA-11a)
    ▼
-Una ejecución Pending por cada flujo activo con ese tipo de evento (versión vigente)
+Una ejecución Pending por cada flujo activo que coincida en origen y tipo (versión vigente)
    ▼
 ┌─► Reclamada por el procesador ──► paso según el nodo actual ──► transacción:
 │     (SKIP LOCKED + concesión)      · Condición: elige «sí» o «no»     · registra el paso (RN-12)
@@ -186,7 +198,7 @@ Una ejecución Pending por cada flujo activo con ese tipo de evento (versión vi
 | AR-01 | `Core` no referencia `Infrastructure`, `Api`, EF Core, ASP.NET Core ni `System.Net.Http` | Prueba de arquitectura (NetArchTest) |
 | AR-03 | Ninguna llamada a `DateTime.Now`, `DateTime.UtcNow` ni `DateTimeOffset.UtcNow`; el tiempo solo por `TimeProvider` | Analizador de APIs prohibidas |
 | AR-04 | Los clientes HTTP hacia terceros solo existen en `Infrastructure` | Prueba de arquitectura |
-| AR-05 | Las contraseñas y la clave de integración no se pasan a registros técnicos | Prueba de arquitectura sobre firmas + analizador |
+| AR-05 | Las contraseñas, las credenciales de proveedores y la clave de integración no se pasan a registros técnicos | Prueba de arquitectura sobre firmas + analizador |
 | AR-06 | Toda acción del registro tiene al menos un CA que la ejercita | Prueba sobre el registro |
 | AR-07 | Ningún archivo de código supera 400 líneas | Comprobación en CI |
 | AR-08 | Todo CA comprometido en `harness/scope.json` tiene una prueba etiquetada; los demás CA se informan como pendientes | Script de trazabilidad (RH-01) |

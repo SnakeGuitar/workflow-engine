@@ -129,3 +129,23 @@ sequenceDiagram
   end
   Note over Worker,DB: two workers divide rows using SKIP LOCKED, no step executes twice (CA-13c)
 ```
+
+## Personal connections (RF-100)
+
+The owner configures the three versioned operations and the destination folder before activation.
+
+```mermaid
+sequenceDiagram
+  participant Shopify
+  participant Api
+  participant Engine
+  participant OpenAI
+  participant Google
+  Shopify->>Api: Order notification
+  Api->>Api: Verify source and deduplicate per connection
+  Api->>Engine: Start matching active version
+  Engine->>OpenAI: Summarize order using owner connection
+  OpenAI-->>Engine: Summary text
+  Engine->>Google: Create document in selected folder
+  Google-->>Engine: Document ID
+```

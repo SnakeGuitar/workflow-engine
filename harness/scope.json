@@ -1,5 +1,5 @@
 {
-  "spec": "docs/en/requirements.md 1.1",
+  "spec": "docs/en/requirements.md 1.3",
   "description": "Committed scope (RH-01, AR-08). Protected (RH-02, AR-09): changes require human reviewer approval.",
   "committed": [
     "CA-40a",
@@ -19,7 +19,22 @@
     "CA-16a",
     "CA-16b",
     "CA-30a",
-    "CA-19b"
+    "CA-19b",
+    "CA-100a",
+    "CA-100b",
+    "CA-100c",
+    "CA-100d",
+    "CA-100e",
+    "CA-100f",
+    "CA-100g",
+    "CA-101a",
+    "CA-101b",
+    "CA-101c",
+    "CA-102a",
+    "CA-102b",
+    "CA-102c",
+    "CA-102d",
+    "CA-102e"
   ],
   "support": [
     "CA-10a",

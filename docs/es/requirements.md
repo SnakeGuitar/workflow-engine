@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 |
+| Versión | 1.3 |
 | Fecha límite | 2026-12-02 |
 | Equipo | 2 personas + agentes de programación |
 | Fuente del alcance | [project-idea.txt](project-idea.txt) (enunciado de la materia) |
@@ -16,7 +16,7 @@ La versión inglesa es la fuente normativa. Los nombres de código, contratos y 
 
 1. **IDs estables.** `RF` requisito funcional, `RNF` no funcional, `RN` regla, `CA` criterio de aceptación, `RH` requisito del arnés, `AR` regla de arquitectura. Un ID nunca se reutiliza; los huecos de numeración son IDs retirados.
 2. **CA.** Formato `Dado / Cuando / Entonces`. Todo CA se verifica sin juicio humano, salvo los marcados **[HUMANO]**.
-3. **Tiempo.** Todo CA con tiempo se lee sobre un reloj controlable (RNF-08): "avanza 2 h" es tiempo simulado.
+3. **Tiempo.** Todo CA local con tiempo se lee sobre un reloj controlable (RNF-08): "avanza 2 h" es tiempo simulado.
 4. **Los CA son el contrato.** Un agente no modifica un CA para hacer pasar una prueba. Todo cambio de este documento se registra en `human/changelog.md` (RH-02, RH-13).
 
 ---
@@ -27,7 +27,7 @@ La versión inglesa es la fuente normativa. Los nombres de código, contratos y 
 
 **Ejemplo de referencia (del enunciado).** «Si un nuevo usuario se registra, esperar 2 horas, verificar si activó su cuenta; si no, enviarle un correo de recordatorio y notificar a soporte». Se entrega instalado como flujo de ejemplo (RF-19).
 
-**Alcance: las cuatro tareas del enunciado y el acceso con roles (RF-30).**
+**Alcance.** El enunciado, acceso por rol, conexiones personales, integraciones extensibles y tareas locales con artefactos (RF-30, RF-100, RF-101, RF-102).
 
 | # | Tarea del enunciado | Requisitos |
 |---|---|---|
@@ -36,7 +36,7 @@ La versión inglesa es la fuente normativa. Los nombres de código, contratos y 
 | T3 | Motor de ejecución asíncrono: evalúa condiciones, ejecuta acciones, soporta esperas y reintentos ante fallos de red | RF-04, RF-05, RF-07, RF-09 a RF-13, RF-18 |
 | T4 | Webhooks salientes y simulación de APIs de terceros (correo, SMS, HTTP POST) | RF-06, RF-16, RF-90, RF-91 |
 
-**Fuera de alcance.** Gestión de usuarios desde la interfaz, registro propio, recuperación de contraseña, roles distintos de Editor y Lector, permisos por flujo y varios inquilinos. Dominios de negocio concretos. Canales distintos de correo, SMS y HTTP POST, y servicios reales de terceros. Mensajes entrantes. Plugins. Ejecuciones en paralelo dentro de un flujo. Escalado a varias instancias. Aplicación móvil.
+**Fuera de alcance.** Administración de usuarios desde la interfaz, registro propio, recuperación de contraseña, roles adicionales, permisos configurables por flujo, varios inquilinos, ramas paralelas, varias instancias y aplicaciones móviles. La compatibilidad con un servicio depende de una interfaz accesible, autorización y un descriptor de operación o adaptador instalado (RF-101).
 
 **Alcance comprometido:** los CA de `harness/scope.json` (protegido, RH-02). El resto es objetivo.
 
@@ -58,7 +58,7 @@ La versión inglesa es la fuente normativa. Los nombres de código, contratos y 
 - R-01 Sistema web, accesible desde el navegador sin instalar nada.
 - R-02 Plazo: 2026-12-02. Equipo de 2 personas con agentes de programación.
 - R-04 Interfaz en inglés.
-- R-08 Se cumplen las cuatro tareas del enunciado (sección 1); fuera de ellas solo entra el acceso con roles (RF-30).
+- R-08 Entregar las cuatro tareas del enunciado y RF-30, RF-100, RF-101 y RF-102.
 
 ---
 
@@ -71,12 +71,14 @@ La versión inglesa es la fuente normativa. Los nombres de código, contratos y 
 | **Diagrama** | Lo que guarda el editor: nodos, posiciones, parámetros y conexiones. |
 | **DAG ejecutable** | Documento JSON, resultado de compilar un flujo válido: nodos, aristas, nodo de inicio, parámetros y orden topológico. Es lo único que el motor ejecuta. |
 | **Versión** | Copia inmutable del DAG ejecutable creada al activar un flujo. |
-| **Evento** | Hecho que llega al motor por HTTP: un **tipo** (por ejemplo `user.registered`), un **identificador** único y **datos** JSON. |
+| **Evento** | Hecho que llega al motor por HTTP: un **tipo** (por ejemplo `user.registered`), un **identificador** único dentro de su origen autenticado y **datos** JSON. |
 | **Ejecución** | Una vez que un flujo corre por un evento. |
 | **Paso** | Lo que hace una ejecución en un nodo. Cada intento de una acción es un paso. |
-| **Contexto** | Datos que una ejecución puede leer: `event.<field>` (datos del evento) y `nodes.<id>.statusCode` y `nodes.<id>.response.<field>` (resultado de un webhook ya ejecutado). |
+| **Contexto** | Datos que una ejecución puede leer: `event.<field>` (datos del evento) y `nodes.<id>.statusCode` y `nodes.<id>.response.<field>` (resultado de un webhook o acción de proveedor ya ejecutada). |
 | **Variable** | Texto `{ruta}` dentro de un parámetro, reemplazado por el valor del contexto al ejecutar (por ejemplo `{event.email}`). |
-| **Acción** | Tarea que un nodo ejecuta: **Enviar correo**, **Enviar SMS** o **Llamar webhook**. |
+| **Acción** | Tarea registrada de RF-06, RF-100, RF-101 o RF-102. |
+| **Conector** | Descriptor o adaptador de proveedor con operaciones versionadas de disparo o acción. |
+| **Conexión** | Autorización de un Editor para una cuenta de proveedor. El nodo del flujo la referencia por ID. |
 | **Webhook saliente** | Llamada HTTP POST a una URL como acción de un flujo. |
 | **Referencia única** | Identificador de un envío (ejecución y nodo) que viaja con él, para que el receptor descarte duplicados. |
 | **Simulador** | Aplicación del proyecto que imita los servicios de terceros e inyecta fallos. Sirve de demostración y de doble de pruebas. |
@@ -115,14 +117,14 @@ Editar el diagrama de un flujo activo no cambia la versión que se ejecuta hasta
 
 | ID | Regla |
 |---|---|
-| RN-06 | Un mismo envío (misma ejecución, mismo nodo) se entrega **una sola vez**, aunque haya reintentos o reinicios: lleva una referencia única y el receptor descarta duplicados. |
+| RN-06 | Para envíos al simulador: Un mismo envío (misma ejecución, mismo nodo) se entrega **una sola vez**, aunque haya reintentos o reinicios: lleva una referencia única y el receptor descarta duplicados. |
 | RN-09 | Una acción que falla por un error reintentable (RN-29) se reintenta hasta **3 veces** con esperas de **1 min, 5 min y 30 min**. Agotados los reintentos, la ejecución queda Fallida. |
-| RN-10 | Un flujo es **válido** si: tiene exactamente un nodo Evento; no tiene ciclos; todos sus nodos son alcanzables desde el Evento; los identificadores de nodo son únicos; todo nodo que no es Condición tiene como máximo una salida; toda Condición tiene a lo sumo una salida «sí» y una «no»; todo Temporizador dura más de 0 y como máximo **90 días**; solo usa acciones registradas (RF-06) con parámetros válidos (URL bien formada, destinatario presente). |
+| RN-10 | Un flujo es **válido** si: tiene exactamente un nodo Evento; no tiene ciclos; todos sus nodos son alcanzables desde el Evento; los identificadores de nodo son únicos; todo nodo que no es Condición tiene como máximo una salida; toda Condición tiene a lo sumo una salida «sí» y una «no»; todo Temporizador dura más de 0 y como máximo **90 días**; solo usa acciones registradas (RF-06, RF-100, RF-101, RF-102) con parámetros válidos (URL bien formada, destinatario presente). |
 | RN-11 | Cada activación de un flujo crea una versión. Una ejecución conserva la versión con la que empezó. |
 | RN-12 | Cada paso queda registrado: nodo, inicio, fin, resultado, entrada resumida, número de intento y error si lo hubo. El registro no se modifica ni se borra. |
-| RN-29 | Son reintentables: fallo de red, tiempo de espera agotado (**10 s**) y respuestas 5xx. Una respuesta 4xx no se reintenta. Aplica a las tres acciones, porque todas llaman a un tercero por HTTP. |
+| RN-29 | Para RF-06: Son reintentables: fallo de red, tiempo de espera agotado (**10 s**) y respuestas 5xx. Una respuesta 4xx no se reintenta. Aplica a las tres acciones, porque todas llaman a un tercero por HTTP. |
 | RN-30 | Una ejecución solo cambia de estado mediante las transiciones de 5.1. Cada cambio queda registrado con su instante. |
-| RN-39 | Un evento cuyo identificador ya se recibió se ignora. Un evento nuevo crea una ejecución por cada flujo activo cuyo nodo Evento declara ese tipo. |
+| RN-39 | Deduplicar por (origen autenticado, ID de evento). Seleccionar flujos activos por origen y tipo. El endpoint con clave de integración representa un origen; cada conexión autenticada de disparador es otro. |
 | RN-40 | Una Condición compara un valor del contexto con un valor literal (número, booleano o texto) mediante `=`, `≠`, `>`, `≥`, `<`, `≤`, «contiene» o «existe». Verdadero sigue la salida «sí»; falso o dato inexistente, la salida «no», y el dato inexistente queda registrado. Si la salida elegida no está conectada, la ejecución termina Completada. |
 | RN-41 | Las variables se rellenan al ejecutar el paso. Una variable sin valor en el contexto hace fallar el paso sin reintento y la ejecución queda Fallida con el nombre de la variable. |
 
@@ -160,17 +162,17 @@ Editar el diagrama de un flujo activo no cambia la versión que se ejecuta hasta
 
 ### 7.2 Ejecución
 
-**RF-04 Disparo por evento.** El sistema origen envía un evento con `POST /api/events` (tipo, identificador y datos) y la clave de integración (CA-30d). Un flujo activo se ejecuta cuando llega un evento del tipo que declara su nodo Evento (RN-39).
+**RF-04 Disparo por evento.** El sistema origen envía un evento con `POST /api/events` (tipo, identificador y datos) y la clave de integración (CA-30d). Un flujo activo se ejecuta cuando llega un evento del origen y tipo que declara su nodo Evento (RN-39).
 - **CA-04a** Dado un flujo activo cuyo evento es `user.registered`, cuando llega un evento de ese tipo, entonces se crea exactamente una ejecución con la versión vigente y su contexto contiene los datos del evento.
 - **CA-04b** Dado que no hay flujo activo para un tipo, cuando llega un evento de ese tipo, entonces se acepta y no se crea ejecución.
 - **CA-04c** Un Editor puede enviar un evento de prueba desde la interfaz con tipo y datos JSON.
-- **CA-04d** Dados dos flujos activos con el mismo tipo de evento, cuando llega un evento, entonces se crea una ejecución de cada uno.
+- **CA-04d** Dados dos flujos activos con el mismo origen y tipo de evento, cuando llega un evento, entonces se crea una ejecución de cada uno.
 
 **RF-05 Condiciones.** Un nodo Condición evalúa el contexto y elige una salida (RN-40).
 - **CA-05a** Dada la condición `nodes.check.response.active = true`, cuando el valor es `true` entonces sigue la salida «sí»; cuando es `false`, la salida «no».
 - **CA-05b** Cuando la condición usa un dato inexistente, entonces la ejecución no se detiene, sigue la salida «no» y el hecho queda registrado.
 
-**RF-06 Catálogo de acciones.** Una acción solo puede usarse en un flujo si está registrada. Acciones: **Enviar correo** (destinatario, asunto y cuerpo), **Enviar SMS** (teléfono y texto) y **Llamar webhook** (RF-16). Las tres son llamadas HTTP a un tercero (en el MVP, el simulador) y siguen RN-09 y RN-29.
+**RF-06 Catálogo de acciones del enunciado.** RF-100 añade operaciones de proveedores. Una acción solo puede usarse en un flujo si está registrada. Acciones: **Enviar correo** (destinatario, asunto y cuerpo), **Enviar SMS** (teléfono y texto) y **Llamar webhook** (RF-16). Las tres son llamadas HTTP a un tercero (en el MVP, el simulador) y siguen RN-09 y RN-29.
 - **CA-06a** Cuando se ejecuta Enviar correo, entonces el simulador recibe exactamente un correo con las variables rellenas.
 - **CA-06e** Dado un flujo con una acción no registrada, cuando se valida, entonces es inválido y el error nombra la acción.
 - **CA-06f** Cuando se ejecuta Enviar SMS, entonces el simulador recibe exactamente un SMS con las variables rellenas.
@@ -231,9 +233,9 @@ Editar el diagrama de un flujo activo no cambia la versión que se ejecuta hasta
 
 ### 7.4 Acceso
 
-**RF-30 Inicio de sesión y roles.** Acceso con usuario y contraseña. Dos roles fijos: **Editor** (diseña, valida, activa y desactiva flujos, envía eventos de prueba y consulta) y **Lector** (solo consulta flujos, ejecuciones e historial). Las cuentas se crean al instalar, desde la configuración. El sistema origen se identifica con la clave de integración, no con una cuenta. El simulador no exige inicio de sesión: representa a servicios externos.
-- **CA-30a** Sin sesión, cualquier acceso a datos o acciones es denegado, salvo iniciar sesión y la recepción de eventos (CA-30d).
-- **CA-30b** Un Lector puede consultar flujos, ejecuciones e historial; cuando intenta guardar, activar o desactivar un flujo o enviar un evento de prueba, entonces se rechaza sin cambiar nada. Un Editor puede hacerlo todo.
+**RF-30 Inicio de sesión y roles.** Acceso con usuario y contraseña. Dos roles fijos: **Editor** (diseña, valida, activa y desactiva flujos, envía eventos de prueba y consulta) y **Lector** (solo consulta flujos, ejecuciones e historial). Las cuentas se crean al instalar, desde la configuración. El endpoint genérico de eventos autentica al sistema origen con la clave de instalación. Las notificaciones de proveedores siguen RF-100. El simulador no exige inicio de sesión: representa a servicios externos.
+- **CA-30a** Sin sesión, cualquier acceso a datos o acciones es denegado, salvo iniciar sesión y recibir eventos autenticados (CA-30d, RF-100).
+- **CA-30b** Un Lector puede consultar flujos, ejecuciones e historial; cuando intenta guardar, activar o desactivar un flujo o enviar un evento de prueba, entonces se rechaza sin cambiar nada. Las operaciones de Editor sobre flujos con conexiones exigen titularidad según RF-100.
 - **CA-30c** Tras 5 intentos fallidos consecutivos, la cuenta se bloquea 5 minutos.
 - **CA-30d** Un evento enviado a `POST /api/events` sin la clave de integración válida se rechaza y no crea ejecuciones.
 - **CA-30e** En la interfaz, el Lector ve el editor en solo lectura, sin controles para modificar, activar ni enviar eventos.
@@ -256,11 +258,56 @@ Editar el diagrama de un flujo activo no cambia la versión que se ejecuta hasta
 
 ---
 
+### 7.6 Conexiones personales con proveedores
+
+**RF-100 Conexiones personales con proveedores.** El Editor autoriza una cuenta desde la interfaz y selecciona la conexión y la operación de cada nodo. El flujo de referencia ejercita estas operaciones. RF-101 define cómo añadir servicios.
+
+| Operación (v1) | Entrada | Salida | Aceptación |
+|---|---|---|---|
+| `shopify.order.created` | Tienda autorizada | `event.orderId`, `event.items` | CA-100b, CA-100g |
+| `openai.summarize` | Artículos del pedido, instrucciones | `nodes.summary.response.text` | CA-100c, CA-100g |
+| `google.createDocument` | ID de carpeta de Drive, título, texto | `nodes.document.response.documentId` | CA-100c, CA-100g |
+
+Los IDs de pedido, instrucciones, IDs de carpeta, títulos, resúmenes e IDs de documento son cadenas. Los artículos forman un arreglo JSON. El ID del pedido alimenta el título del documento y el resumen alimenta el cuerpo. Los ejemplos de salida usan los IDs de nodo `summary` y `document`. Google crea un documento nativo de Google Docs en la carpeta de Drive seleccionada. Cada conexión concede solo los permisos que requieren sus operaciones.
+
+- **CA-100a** Dados dos Editores y un Lector, solo el Editor titular puede listar, seleccionar, usar o revocar sus conexiones. Guardar, editar, activar, desactivar o probar un flujo con conexiones exige ser titular del flujo y de todas sus conexiones. Cada solicitud rechazada produce cero cambios y cero llamadas al proveedor.
+- **CA-100b** Dados disparadores activos para las tiendas A y B, entregar dos veces el mismo evento de pedido autenticado de A crea una ejecución para A y cero para B. El mismo ID de evento entregado desde B crea una ejecución para B. Una notificación sin autenticar crea cero ejecuciones.
+- **CA-100c** Dadas cuentas conectadas y un flujo cuyo titular es el Editor que lo creó, la interfaz ofrece las entradas del catálogo y las salidas de los nodos precedentes. Guardar y reabrir conserva la asignación. La activación rechaza una salida desconocida o entrada incompatible e identifica el nodo. Una activación válida fija las versiones de operación y los IDs de conexión en el DAG. Publicar otra versión de la operación conserva la versión fijada en el DAG activo.
+- **CA-100d** Dada una conexión revocada, se rechaza la activación. Una ejecución en curso que llega a una acción con esa conexión pasa a Fallida antes del envío. Las notificaciones posteriores del disparador revocado crean cero ejecuciones.
+- **CA-100e** Dada una acción de proveedor cuya respuesta se pierde después del envío, incluso tras reiniciar el procesador, se detiene como Fallida con motivo `delivery_uncertain` y se hacen cero solicitudes adicionales para ese paso. RN-09 solo se aplica a fallos que se sabe que preceden al envío. Los errores explícitos del proveedor terminan el paso.
+- **CA-100f** Dado un marcador de credencial único por proveedor, aparecen cero marcadores en respuestas de API, diagrama, DAG compilado, historial, logs técnicos e informes del arnés.
+- **CA-100g** [LIVE] [evidence: shopify_order, openai_response, google_document] Dadas cuentas reales dedicadas conectadas mediante la interfaz y un flujo activo, crear un pedido con identificador único en la tienda Shopify autorizada. En 5 minutos observar una ejecución completada, una llamada correcta a OpenAI con resumen no vacío y exactamente un documento de Google con el ID del pedido como título en la carpeta elegida de Drive. Leer el contenido de forma independiente mediante Google y compararlo con la salida del resumen. Registrar solo referencias de proveedores depuradas y veredictos.
+
+### 7.7 Servicios extensibles y trabajo local
+
+**RF-101 Operaciones independientes del servicio.** Un Editor registra desde la interfaz un descriptor HTTP versionado, vincula una conexión personal, asigna entradas y salidas y usa la operación en el mismo editor que RF-100. El descriptor declara ID, versión, tipo de disparador o acción, esquemas de entrada y salida, método HTTP, endpoint y vinculación de credenciales. Para otros protocolos, autenticación personalizada o SDK nativos, el operador instala un adaptador versionado que implementa el mismo contrato. Las credenciales y los orígenes verificados de eventos quedan vinculados a su conexión.
+
+- **CA-101a** Dado un servicio HTTP con ID de proveedor nuevo y una operación elegida por el oráculo después de compilar la aplicación, registrarlo, vincular una credencial personal, enviar una solicitud con los datos asignados y leer su respuesta en el nodo siguiente. El oráculo compara método, ruta y cuerpo. El hash de compilación de la aplicación permanece idéntico.
+- **CA-101b** Dado un adaptador independiente con un protocolo de prueba distinto de HTTP, instalarlo, autorizar su conexión, recibir un disparador autenticado e invocar su acción. Comprobar el valor devuelto, el rechazo de conexiones de otro titular y que los binarios del motor y del editor son idénticos. Retirar una versión necesaria impide nuevas activaciones y hace fallar explícitamente el paso afectado.
+- **CA-101c** [LIVE] [evidence: service_operation, remote_result] Dado un servicio real autorizado ajeno al ejemplo RF-100, registrar su operación y ejecutar un flujo con una entrada única. En cinco minutos el oráculo lee de forma independiente el resultado correlacionado en ese servicio y lo compara con la entrada esperada. El hash de compilación de la aplicación permanece idéntico.
+
+**RF-102 Tareas locales y artefactos.** Un Editor puede encadenar pasos locales en la máquina que ejecuta el motor, entre ellos crear un script, ejecutarlo y publicar archivos. Las entradas pueden ser archivos aportados por el usuario, valores asignados o artefactos de nodos anteriores. La ejecución local funciona sin conexión. Cada artefacto completado tiene ID inmutable, nombre de archivo, tipo de medio, tamaño en bytes y huella SHA-256. Los nodos posteriores lo consumen por ID y su titular puede descargarlo desde el historial de ejecución.
+
+Las operaciones locales de ejemplo usan el mismo catálogo. El perfil de evidencia de estas filas es `offline`.
+
+| Operación (v1) | Entrada | Salida | Aceptación |
+|---|---|---|---|
+| `local.document` | Contenido y formato | Artefacto DOCX, PPTX o XLSX | offline CA-102a |
+| `local.analyze` | Datos y análisis | Informe | offline CA-102b |
+| `local.writeScript` | Código fuente | Artefacto de script | offline CA-102c |
+| `local.runScript` | Artefacto de script y argumentos | Artefactos de salida declarados | offline CA-102c, CA-102d |
+
+- **CA-102a** Dados un flujo sin red y una marca de entrada, generar artefactos DOCX, PPTX y XLSX. Descargarlos y abrirlos con lectores de formato independientes. Comprobar la marca en el cuerpo del documento, el título de una diapositiva y la celda A1 del libro, respectivamente. Contrastar tamaño y huella declarados con los bytes descargados.
+- **CA-102b** Dado un CSV con grupos A, B, A y valores 2, 4, 6, analizar los datos en local y producir un informe con recuentos A=2, B=1 y medias A=4, B=4. Repetir con otra entrada y contrastar el informe descargado con agregados calculados independientemente a partir de esa entrada. Para la serie ordenada 2, 4, 6, 3, 2, identificar la secuencia contigua estrictamente creciente más larga como 2, 4, 6 e informar su longitud de 3.
+- **CA-102c** Dado un paso que crea un script, descargar el script Python generado y pasar su ID de artefacto y un valor nuevo a un paso de ejecución local. Para el caso de aceptación la entrada es una cadena. El archivo JSON devuelto debe contener ese valor y su longitud. Tras reiniciar el motor, comprobar que el ID, los bytes y la huella del artefacto son idénticos.
+- **CA-102d** Dado un script que supera su tiempo límite o termina con código distinto de cero, hacer fallar el paso, detener sus procesos hijos y publicar cero archivos parciales. Un script no puede leer el espacio de otra ejecución, credenciales del host ni archivos ajenos a sus entradas y espacio asignado. Denegar descargas a otro usuario. Tras una recuperación, publicar cada salida correcta una sola vez por ejecución, nodo y nombre de salida.
+- **CA-102e** Dado un flujo que pasa la salida de una operación externa a un informe local y el artefacto resultante a otra operación externa, el receptor obtiene los mismos bytes y la misma huella que descarga el titular desde el historial.
+
 ## 8. Requisitos no funcionales
 
 | ID | Requisito | Criterio de verificación |
 |---|---|---|
-| RNF-08 | **Testabilidad.** | **CA-N08a** Toda espera se verifica con reloj controlable. **CA-N08b** El simulador sirve de doble de pruebas con la inyección de fallos de RF-91. **CA-N08c** La suite de aceptación completa se ejecuta en 10 min o menos sin acceso a servicios externos reales. |
+| RNF-08 | **Testabilidad.** | **CA-N08a** Las esperas locales se verifican con reloj controlable. **CA-N08b** El simulador sirve de doble de pruebas con la inyección de fallos de RF-91. **CA-N08c** La suite completa de aceptación local se ejecuta en 10 min o menos sin acceso a servicios externos reales. |
 | RNF-07 | **Seguridad.** | **CA-N07a** Ninguna operación devuelve una contraseña ni la clave de integración, y ninguna de las dos aparece en registros técnicos. |
 | RNF-09 | **Localización.** | **CA-N09a** Interfaz en inglés; fechas YYYY-MM-DD y hora de 24 h. |
 | RNF-14 | **Instalación reproducible.** | **CA-N14a** [HUMANO] Desde un repositorio limpio, siguiendo el README, `docker compose up` deja funcionando la aplicación, el simulador y el flujo de ejemplo en 15 min o menos. |
@@ -287,3 +334,4 @@ Editar el diagrama de un flujo activo no cambia la versión que se ejecuta hasta
 | RH-12 | **Revisión humana.** Cada cambio integrado tiene un revisor humano y una lista de comprobación. | 100 % de los cambios integrados con revisor registrado. Los autores pueden explicar cada parte entregada **[HUMANO]**. |
 | RH-13 | **Especificación versionada.** Toda medición indica la versión de este documento. | Cada registro de RH-04 incluye la versión. |
 | RH-14 | **Presupuesto de uso.** El arnés lleva la cuenta del uso por modelo y se detiene al alcanzar el límite configurado. | Al alcanzar el límite, no se inicia ninguna tarea nueva. |
+| RH-100 | **Verificación de entrega.** Comprobar IDs bilingües, referencias, versión del alcance y asignación de operaciones a CA. Por suite local/real informar por separado CA comprometidos cubiertos, aprobados y exigidos. | Exigir 100% aprobados, cero omitidos y duración local ≤600 s. Sin ejecutor, prerrequisitos o credenciales reales, el resultado es bloqueado. Una aserción incumplida da fallo. Registrar base y especificación en cada resultado. M1–M6 miden por separado el trabajo de agentes. |

@@ -40,3 +40,5 @@ flowchart LR
 | `Core` | Validador, compilador a DAG, intérprete, máquina de estados y registro de acciones. Define los puertos. No conoce base de datos ni HTTP (AR-01). |
 | `Infrastructure` | EF Core sobre PostgreSQL, procesador en segundo plano (reclamo con `SKIP LOCKED`) y las tres acciones HTTP (ADR-03, ADR-05). |
 | `Simulator` | Receptores de correo, SMS y HTTP POST, respuestas configurables e inyección de fallos. Aplicación aparte (ADR-15). |
+
+Infrastructure también aloja los adaptadores instalados, el ejecutor local aislado y el almacenamiento duradero de artefactos. Api comprueba la titularidad al acceder a conexiones y artefactos. Core consume el catálogo versionado y salidas tipadas (ADR-100, ADR-101).

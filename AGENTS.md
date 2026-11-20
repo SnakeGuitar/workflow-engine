@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Web workflow engine: node editor → validation and DAG compilation → asynchronous engine with waits/retries → webhooks and email/SMS/HTTP POST simulator, with sign-in and two roles (Editor and Reader). Scope: [project-idea.txt](project-idea.txt) plus role-based access. Deadline: 2026-12-02.
+Web workflow engine: node editor → validation and DAG compilation → asynchronous engine with waits/retries → webhooks and email/SMS/HTTP POST simulator, with sign-in and two roles (Editor and Reader). Scope: [project-idea.txt](project-idea.txt) plus role-based access, personal connections, extensible services and local artifact tasks (RF-100, RF-101, RF-102). Deadline: 2026-12-02.
 
 ## What to read
 
@@ -20,7 +20,7 @@ Web workflow engine: node editor → validation and DAG compilation → asynchro
 - Committed scope lives in `harness/scope.json` (`spec`, `description`, `committed`, `support`).
 - Record each task in `harness/tasks.ndjson` using the harness `task` command (RH-04). Until the harness exists, append an honest manual record identifying that limitation.
 - Every acceptance test carries its CA ID (`[Ac("CA-07a")]`). Failures cite the CA.
-- Never log passwords or integration keys (AR-05).
+- Never log passwords, provider credentials or integration keys (AR-05).
 - Obtain time only through `TimeProvider` (AR-03). Never `DateTime.Now`/`UtcNow`.
 - One-way dependencies: `Api → Infrastructure → Core`, `Api → Core`. `Core` knows no database, HTTP or ASP.NET (AR-01). No project references `Simulator` (AR-16).
 - No code file exceeds 400 lines (AR-07).

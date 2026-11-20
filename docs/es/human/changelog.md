@@ -54,3 +54,11 @@ La instrucción del usuario (D-27) establece inglés para todo el proyecto y doc
 - `harness/scope.json`: claves `spec`, `description`, `committed` y `support`; referencia a `docs/en/requirements.md 1.1`.
 - Se regeneran las imágenes de los diagramas desde Mermaid en ambos idiomas.
 - Todavía no hay código de aplicación ni arnés ejecutable. Se registra esta tarea manualmente; el agente no escribe una línea de aprobación en un commit.
+
+## 1.2 — Conexiones personales
+
+RF-100, ADR-100 y RH-100 especifican conexiones personales, operaciones de proveedores y evidencia local y real por separado.
+
+## 1.3 — Servicios extensibles y artefactos locales
+
+RF-101, RF-102 y ADR-101 definen la incorporación independiente de proveedores, las tareas sin red y la publicación de artefactos. La evidencia real se declara por criterio.

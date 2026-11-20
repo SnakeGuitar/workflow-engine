@@ -50,3 +50,11 @@ Scope becomes `project-idea.txt` plus sign-in with two fixed roles. The assignme
 ## Language migration 1.1 (2026-11-17)
 
 User instruction D-27 authorizes English throughout the project and English/Spanish documentation. English is authoritative at `docs/en/`; Spanish lives at `docs/es/`. File names and executable examples use English in both. JPG exports are regenerated from current Mermaid sources in both languages. No application code or executable harness exists yet, so this migration changes specifications, examples and scope metadata only. No approval commit trailer is authored by the agent.
+
+## 1.2 — Personal connections
+
+RF-100, ADR-100 and RH-100 specify personal connections, provider operations and separate local and live evidence.
+
+## 1.3 — Extensible services and local artifacts
+
+RF-101, RF-102 and ADR-101 define independent provider installation, offline tasks and artifact publication. Live evidence is declared per criterion.
