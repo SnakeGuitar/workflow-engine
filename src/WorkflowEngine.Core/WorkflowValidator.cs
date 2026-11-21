@@ -54,22 +54,33 @@ public sealed class WorkflowValidator(OperationCatalog catalog)
         var finished = new HashSet<string>();
         var path = new List<string>();
         var active = new Dictionary<string, int>();
-        void Visit(string id)
+        var frames = new Stack<(string Id, int Next)>();
+        foreach (var root in outgoing.Keys)
         {
-            if (finished.Contains(id)) return;
-            if (active.TryGetValue(id, out var index))
+            if (finished.Contains(root)) continue;
+            frames.Push((root, 0));
+            while (frames.TryPop(out var frame))
             {
-                errors.Add("cycle: " + string.Join(" -> ", path.Skip(index).Append(id)));
-                return;
+                var (id, next) = frame;
+                if (next == 0)
+                {
+                    active.Add(id, path.Count);
+                    path.Add(id);
+                }
+                if (next == outgoing[id].Count)
+                {
+                    path.RemoveAt(path.Count - 1);
+                    active.Remove(id);
+                    finished.Add(id);
+                    continue;
+                }
+                frames.Push((id, next + 1));
+                var target = outgoing[id][next].Target;
+                if (active.TryGetValue(target, out var index))
+                    errors.Add("cycle: " + string.Join(" -> ", path.Skip(index).Append(target)));
+                else if (!finished.Contains(target)) frames.Push((target, 0));
             }
-            active.Add(id, path.Count);
-            path.Add(id);
-            foreach (var edge in outgoing[id]) Visit(edge.Target);
-            path.RemoveAt(path.Count - 1);
-            active.Remove(id);
-            finished.Add(id);
         }
-        foreach (var id in outgoing.Keys) Visit(id);
     }
 
     private void ValidateNode(DiagramNode node, List<string> errors)
