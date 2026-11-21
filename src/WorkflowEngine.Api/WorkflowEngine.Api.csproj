@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="../WorkflowEngine.Infrastructure/WorkflowEngine.Infrastructure.csproj" />
+    <ProjectReference Include="../WorkflowEngine.Core/WorkflowEngine.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,4 @@
+P:System.DateTime.Now;AR-03: Inject TimeProvider and use GetUtcNow().
+P:System.DateTime.UtcNow;AR-03: Inject TimeProvider and use GetUtcNow().
+P:System.DateTimeOffset.Now;AR-03: Inject TimeProvider and use GetUtcNow().
+P:System.DateTimeOffset.UtcNow;AR-03: Inject TimeProvider and use GetUtcNow().
