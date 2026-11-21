@@ -157,6 +157,51 @@ namespace WorkflowEngine.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("WorkflowEngine.Infrastructure.StoredVersion", b =>
+                {
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.HasKey("WorkflowId", "Number");
+
+                    b.ToTable("WorkflowVersions", (string)null);
+                });
+
+            modelBuilder.Entity("WorkflowEngine.Infrastructure.StoredWorkflow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Diagram")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.ToTable("Workflows", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.HasOne("WorkflowEngine.Infrastructure.Account", null)
@@ -180,6 +225,24 @@ namespace WorkflowEngine.Infrastructure.Migrations
                     b.HasOne("WorkflowEngine.Infrastructure.Account", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WorkflowEngine.Infrastructure.StoredVersion", b =>
+                {
+                    b.HasOne("WorkflowEngine.Infrastructure.StoredWorkflow", null)
+                        .WithMany()
+                        .HasForeignKey("WorkflowId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WorkflowEngine.Infrastructure.StoredWorkflow", b =>
+                {
+                    b.HasOne("WorkflowEngine.Infrastructure.Account", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

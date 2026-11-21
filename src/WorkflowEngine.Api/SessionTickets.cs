@@ -4,18 +4,18 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace WorkflowEngine.Api;
 
-internal sealed class SessionTickets(IMemoryCache cache) : ITicketStore
+internal sealed class SessionTickets(IMemoryCache cache, TimeProvider clock) : ITicketStore
 {
     public Task<string> StoreAsync(AuthenticationTicket ticket)
     {
         var key = Guid.NewGuid().ToString("N");
-        cache.Set(key, ticket, ticket.Properties.ExpiresUtc!.Value);
+        cache.Set(key, ticket, ticket.Properties.ExpiresUtc!.Value - clock.GetUtcNow());
         return Task.FromResult(key);
     }
 
     public Task RenewAsync(string key, AuthenticationTicket ticket)
     {
-        if (cache.TryGetValue(key, out _)) cache.Set(key, ticket, ticket.Properties.ExpiresUtc!.Value);
+        if (cache.TryGetValue(key, out _)) cache.Set(key, ticket, ticket.Properties.ExpiresUtc!.Value - clock.GetUtcNow());
         return Task.CompletedTask;
     }
 
