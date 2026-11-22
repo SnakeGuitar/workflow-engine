@@ -12,6 +12,6 @@ public sealed class ApplicationFactory : WebApplicationFactory<Program>
     public FakeTimeProvider Clock { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.ConfigureServices(services => services.Replace(
+        builder.UseEnvironment("Testing").ConfigureServices(services => services.Replace(
             ServiceDescriptor.Singleton<TimeProvider>(Clock)));
 }
